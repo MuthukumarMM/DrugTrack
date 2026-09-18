@@ -102,10 +102,13 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </div>
-        <Button disabled={busy || !isConfigured} className="w-full">
+        <Button disabled={busy || (!isConfigured && !demoMode)} className="w-full">
           {busy ? 'Signing in...' : 'Sign in'}
         </Button>
-        {!isConfigured && <p className="text-xs text-amber-700">Add Firebase values to `.env` before signing in.</p>}
+        {!isConfigured && !demoMode && <p className="text-xs text-amber-700">Add Firebase values to `.env` before signing in.</p>}
+        {demoMode && !isConfigured && (
+          <p className="text-xs text-teal-700 font-medium">Demo Mode Active: Click any quick demo account below to instantly explore roles.</p>
+        )}
       </form>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Quick demo accounts</p>

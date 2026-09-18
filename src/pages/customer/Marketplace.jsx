@@ -1,1 +1,109 @@
-import{useEffect,useState}from'react';import{Link}from'react-router-dom';import toast from'react-hot-toast';import{subscribeDrugs}from'../../services/drugService';import{subscribeInventory}from'../../services/inventoryService';import{subscribeCategories}from'../../services/categoryService';import{addToCart}from'../../services/cartService';import{useAuth}from'../../context/AuthContext';import LoadingSpinner from'../../components/feedback/LoadingSpinner';import Button from'../../components/ui/Button';export default function Marketplace(){const{currentUser}=useAuth(),[drugs,setDrugs]=useState(null),[stock,setStock]=useState([]),[cats,setCats]=useState([]),[term,setTerm]=useState(''),[cat,setCat]=useState('');useEffect(()=>subscribeDrugs(setDrugs),[]);useEffect(()=>subscribeInventory(setStock),[]);useEffect(()=>subscribeCategories(setCats),[]);if(!drugs)return <LoadingSpinner/>;const cards=drugs.filter(d=>(!cat||d.categoryId===cat)&&`${d.name} ${d.genericName} ${d.brandName}`.toLowerCase().includes(term.toLowerCase())).map(d=>({...d,inventory:stock.find(i=>i.drugId===d.id)}));return <div><section className="rounded-3xl bg-gradient-to-r from-teal-700 to-cyan-700 p-7 text-white"><p className="font-semibold">DRUGTRACK MARKETPLACE</p><h1 className="mt-2 text-3xl font-bold">Trusted medicines, traceable journeys.</h1><input className="mt-5 w-full max-w-xl rounded-xl p-3 text-slate-900" placeholder="Search medicines, generic names, brands" value={term} onChange={e=>setTerm(e.target.value)}/></section><div className="my-5 flex flex-wrap gap-2"><button className="rounded-full border px-3 py-1" onClick={()=>setCat('')}>All</button>{cats.map(c=><button key={c.id} onClick={()=>setCat(c.id)} className="rounded-full border px-3 py-1">{c.name}</button>)}</div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{cards.map(d=>{const i=d.inventory,available=i?i.quantity-i.reservedQuantity:0;return <article className="panel p-5" key={d.id}><p className="text-xs font-semibold text-brand-600">{d.genericName}</p><h2 className="mt-1 text-lg font-bold">{d.name}</h2><p className="text-sm text-slate-500">{d.strength} · {d.dosageForm}</p><p className="mt-3 font-bold">₹{d.basePrice}</p><p className={`mt-2 text-xs font-semibold ${available?'text-teal-700':'text-red-600'}`}>{available?`${available} available`:'OUT OF STOCK'}</p>{d.prescriptionRequired&&<p className="mt-2 text-xs text-amber-700">Prescription required</p>}<div className="mt-4 flex gap-2"><Link className="rounded-xl border px-3 py-2 text-sm" to={`/shop/drug/${d.id}`}>Details</Link><Button disabled={!available} onClick={()=>addToCart(currentUser.uid,{inventoryId:i.id,drugId:d.id,batchId:i.batchId,sellerId:i.ownerId,sellerType:i.ownerType,quantity:1,unitPrice:Number(i.sellingPrice),availableQuantity:available,drugName:d.name,imageUrl:d.imageUrl||''}).then(()=>toast.success('Added to cart')).catch(e=>toast.error(e.message))}>Add</Button></div></article>})}</div></div>}
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import { subscribeDrugs } from '../../services/drugService'
+import { subscribeInventory } from '../../services/inventoryService'
+import { subscribeCategories } from '../../services/categoryService'
+import { addToCart } from '../../services/cartService'
+import { useAuth } from '../../context/AuthContext'
+import LoadingSpinner from '../../components/feedback/LoadingSpinner'
+import Button from '../../components/ui/Button'
+
+export default function Marketplace() {
+  const { currentUser } = useAuth()
+  const [drugs, setDrugs] = useState(null)
+  const [stock, setStock] = useState([])
+  const [cats, setCats] = useState([])
+  const [term, setTerm] = useState('')
+  const [cat, setCat] = useState('')
+
+  useEffect(() => subscribeDrugs(setDrugs), [])
+  useEffect(() => subscribeInventory(setStock), [])
+  useEffect(() => subscribeCategories(setCats), [])
+
+  if (!drugs) return <LoadingSpinner />
+
+  const cards = drugs
+    .filter(d => (!cat || d.categoryId === cat) && `${d.name} ${d.genericName} ${d.brandName}`.toLowerCase().includes(term.toLowerCase()))
+    .map(d => ({ ...d, inventory: stock.find(i => i.drugId === d.id) }))
+
+  return (
+    <div>
+      <section className="rounded-3xl bg-gradient-to-r from-teal-700 to-cyan-700 p-7 text-white">
+        <p className="font-semibold">DRUGTRACK MARKETPLACE</p>
+        <h1 className="mt-2 text-3xl font-bold">Trusted medicines, traceable journeys.</h1>
+        <input
+          className="mt-5 w-full max-w-xl rounded-xl p-3 text-slate-900"
+          placeholder="Search medicines, generic names, brands"
+          value={term}
+          onChange={e => setTerm(e.target.value)}
+        />
+      </section>
+      <div className="my-5 flex flex-wrap gap-2">
+        <button
+          className={`rounded-full border px-3 py-1 ${!cat ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-300'}`}
+          onClick={() => setCat('')}
+        >
+          All
+        </button>
+        {cats.map(c => (
+          <button
+            key={c.id}
+            onClick={() => setCat(c.id)}
+            className={`rounded-full border px-3 py-1 ${cat === c.id ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-300'}`}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map(d => {
+          const i = d.inventory
+          const available = i ? i.quantity - i.reservedQuantity : 0
+          return (
+            <article className="panel p-5" key={d.id}>
+              <p className="text-xs font-semibold text-brand-600">{d.genericName}</p>
+              <h2 className="mt-1 text-lg font-bold">{d.name}</h2>
+              <p className="text-sm text-slate-500">
+                {d.strength} · {d.dosageForm}
+              </p>
+              <p className="mt-3 font-bold">₹{d.basePrice}</p>
+              <p className={`mt-2 text-xs font-semibold ${available ? 'text-teal-700' : 'text-red-600'}`}>
+                {available ? `${available} available` : 'OUT OF STOCK'}
+              </p>
+              {d.prescriptionRequired && <p className="mt-2 text-xs text-amber-700">Prescription required</p>}
+              <div className="mt-4 flex gap-2">
+                <Link className="rounded-xl border px-3 py-2 text-sm" to={`/shop/drug/${d.id}`}>
+                  Details
+                </Link>
+                <Button
+                  disabled={!available}
+                  onClick={() => {
+                    const uid = currentUser?.uid || 'guest'
+                    addToCart(uid, {
+                      inventoryId: i.id,
+                      drugId: d.id,
+                      batchId: i.batchId,
+                      sellerId: i.ownerId,
+                      sellerType: i.ownerType,
+                      quantity: 1,
+                      unitPrice: Number(i.sellingPrice),
+                      availableQuantity: available,
+                      drugName: d.name,
+                      imageUrl: d.imageUrl || '',
+                    })
+                      .then(() => toast.success('Added to cart'))
+                      .catch(e => toast.error(e.message))
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+

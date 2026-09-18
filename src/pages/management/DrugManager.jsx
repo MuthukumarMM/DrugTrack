@@ -1,2 +1,5 @@
-import{useAuth}from'../../context/AuthContext';import{createDrug,deleteDrug,subscribeDrugs,updateDrug}from'../../services/drugService';import RecordsPage from'./RecordsPage';
-const fields=[{name:'name',label:'Drug name',required:true},{name:'genericName',label:'Generic name',required:true},{name:'brandName',label:'Brand name'},{name:'categoryId',label:'Category ID',required:true},{name:'dosageForm',label:'Dosage form',required:true},{name:'strength',label:'Strength',required:true},{name:'composition',label:'Composition'},{name:'storageCondition',label:'Storage condition'},{name:'basePrice',label:'Base price',type:'number',min:0,required:true}];export default function DrugManager({admin=false}){const{currentUser}=useAuth();const owner=admin?undefined:currentUser.uid;const clean=d=>({...d,manufacturerId:admin?(d.manufacturerId||currentUser.uid):currentUser.uid,basePrice:Number(d.basePrice),prescriptionRequired:false,status:'ACTIVE'});return <RecordsPage title={admin?'Drug catalogue':'My drugs'} description="Manufacturer-owned medicine records; category IDs come from the admin categories collection." fields={fields} subscribe={cb=>subscribeDrugs(cb,owner)} create={d=>createDrug(clean(d))} update={(id,d)=>updateDrug(id,clean(d))} remove={deleteDrug} defaults={{name:'',genericName:'',brandName:'',categoryId:'',dosageForm:'',strength:'',composition:'',storageCondition:'',basePrice:''}}/>}
+import DrugPage from './DrugPage'
+
+export default function DrugManager({ admin = false }) {
+  return <DrugPage admin={admin} />
+}

@@ -5,6 +5,8 @@ import { getUserProfile, updateLastLogin } from '../services/userService'
 
 const AuthContext = createContext(null)
 
+const demoMode = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -22,7 +24,7 @@ export function AuthProvider({ children }) {
       const data = await getUserProfile(user.uid)
       if (!data) {
         setProfile(null)
-        setProfileError('Your Firebase account exists, but the DrugTrack profile document is missing.')
+        setProfileError('Your account exists, but the DrugTrack profile document is missing.')
         return null
       }
 
@@ -38,10 +40,22 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isFirebaseConfigured || demoMode) {
+      try {
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('drugtrack_demo_user') : null
+        if (saved) {
+          const user = JSON.parse(saved)
+          setCurrentUser(user)
+          loadProfile(user).finally(() => setLoading(false))
+          return undefined
+        }
+      } catch (e) {
+        console.warn('Failed to load demo user', e)
+      }
+
       setCurrentUser(null)
       setProfile(null)
-      setProfileError('Firebase environment values are not configured.')
+      setProfileError('')
       setLoading(false)
       return undefined
     }
@@ -71,7 +85,13 @@ export function AuthProvider({ children }) {
       role: profile?.role,
       loading,
       isConfigured: isFirebaseConfigured,
-      refreshProfile: user => loadProfile(user || currentUser),
+      demoMode,
+      refreshProfile: async user => {
+        if (user) {
+          setCurrentUser(user)
+        }
+        return loadProfile(user || currentUser)
+      },
     }),
     [currentUser, profile, profileError, loading],
   )

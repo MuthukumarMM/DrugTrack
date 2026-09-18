@@ -13,14 +13,20 @@ export const loginUser = async (email, password) => {
   if (demoMode) {
     const demoAccount = validateDemoLogin(trimmedEmail, safePassword)
     if (demoAccount) {
-      return {
-        user: {
-          uid: demoAccount.uid,
-          email: demoAccount.email,
-          displayName: demoAccount.displayName,
-          photoURL: '',
-        },
+      const user = {
+        uid: demoAccount.uid,
+        email: demoAccount.email,
+        displayName: demoAccount.displayName,
+        photoURL: '',
       }
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('drugtrack_demo_user', JSON.stringify(user))
+        }
+      } catch (e) {
+        console.warn('Could not save demo user to localStorage', e)
+      }
+      return { user }
     }
   }
 
@@ -28,6 +34,13 @@ export const loginUser = async (email, password) => {
 }
 
 export const signOutUser = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('drugtrack_demo_user')
+    }
+  } catch (e) {
+    console.warn('Could not remove demo user from localStorage', e)
+  }
   if (demoMode) return Promise.resolve()
   return firebaseSignOutUser()
 }

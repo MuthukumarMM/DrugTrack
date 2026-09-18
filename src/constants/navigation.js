@@ -1,0 +1,57 @@
+export const roleLinks = {
+  ADMIN: [
+    { label: 'Overview', to: '/admin' },
+    { label: 'Users & Approvals', to: '/admin/users' },
+    { label: 'Categories', to: '/admin/categories' },
+    { label: 'Drug Master', to: '/admin/drugs' },
+    { label: 'Global Batches', to: '/admin/batches' },
+    { label: 'Global Inventory', to: '/admin/inventory' },
+    { label: 'All Orders', to: '/admin/orders' },
+    { label: 'Profile', to: '/admin/profile' },
+  ],
+  MANUFACTURER: [
+    { label: 'Dashboard', to: '/manufacturer' },
+    { label: 'My Drugs', to: '/manufacturer/my-drugs' },
+    { label: 'Batches & QR', to: '/manufacturer/batches' },
+    { label: 'Factory Inventory', to: '/manufacturer/inventory' },
+    { label: 'Incoming Orders', to: '/manufacturer/orders' },
+    { label: 'Profile', to: '/manufacturer/profile' },
+  ],
+  WAREHOUSE_MANAGER: [
+    { label: 'Dashboard', to: '/warehouse' },
+    { label: 'Inventory & Bins', to: '/warehouse/inventory' },
+    { label: 'Profile', to: '/warehouse/profile' },
+  ],
+  DISTRIBUTOR: [
+    { label: 'Dashboard', to: '/distributor' },
+    { label: 'Distribution Stock', to: '/distributor/inventory' },
+    { label: 'Orders & Dispatch', to: '/distributor/orders' },
+    { label: 'Profile', to: '/distributor/profile' },
+  ],
+  PHARMACY: [
+    { label: 'Dashboard', to: '/pharmacy' },
+    { label: 'Pharmacy Stock', to: '/pharmacy/my-inventory' },
+    { label: 'Customer Orders', to: '/pharmacy/orders' },
+    { label: 'Profile', to: '/pharmacy/profile' },
+  ],
+  HOSPITAL: [
+    { label: 'Dashboard', to: '/hospital' },
+    { label: 'Department Stock', to: '/hospital/inventory' },
+    { label: 'Hospital Orders', to: '/hospital/orders' },
+    { label: 'Profile', to: '/hospital/profile' },
+  ],
+  DELIVERY_STAFF: [
+    { label: 'Deliveries', to: '/delivery' },
+    { label: 'Profile', to: '/delivery/profile' },
+  ],
+  CUSTOMER: [
+    { label: 'Marketplace', to: '/shop' },
+    { label: 'All Medicines', to: '/medicines' },
+    { label: 'My Cart', to: '/cart' },
+    { label: 'Active Orders', to: '/orders' },
+    { label: 'Order History', to: '/history' },
+    { label: 'Saved Addresses', to: '/addresses' },
+    { label: 'Notifications', to: '/notifications' },
+    { label: 'My Profile', to: '/profile' },
+  ],
+}

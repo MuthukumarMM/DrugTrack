@@ -22,7 +22,22 @@ export default function VerifyBatchPage() {
   }
 
   useEffect(() => {
-    if (routeToken) runVerify(routeToken)
+    if (!routeToken) return
+    let isMounted = true
+    setBusy(true)
+    verifyBatch(routeToken.trim())
+      .then(res => {
+        if (isMounted) setResult(res)
+      })
+      .catch(() => {
+        if (isMounted) setResult({ valid: false, status: 'UNAVAILABLE' })
+      })
+      .finally(() => {
+        if (isMounted) setBusy(false)
+      })
+    return () => {
+      isMounted = false
+    }
   }, [routeToken])
 
   const verify = event => {

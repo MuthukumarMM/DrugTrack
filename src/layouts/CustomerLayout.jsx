@@ -1,1 +1,6 @@
-import RoleLayout,{roleLinks}from './RoleLayout'; export default function CustomerLayout(){return <RoleLayout role="CUSTOMER" links={roleLinks.CUSTOMER}/>}
+import RoleLayout from './RoleLayout'
+import { roleLinks } from '../constants/navigation'
+
+export default function CustomerLayout() {
+  return <RoleLayout role="CUSTOMER" links={roleLinks.CUSTOMER} />
+}

@@ -1,0 +1,6 @@
+{
+  "name": "DrugTrack",
+  "description": "Pharmaceutical supply chain tracking, verification, and inventory management platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

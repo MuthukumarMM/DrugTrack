@@ -30,6 +30,10 @@ function label(status) {
   return status === 'SHIPMENT' ? 'Create shipment' : `Move to ${status.replaceAll('_', ' ')}`
 }
 
+function generateTrackingNumber() {
+  return `DT-TRK-${String(Date.now()).slice(-6)}`
+}
+
 export default function OrderQueuePage({ admin = false }) {
   const { currentUser, role } = useAuth()
   const [orders, setOrders] = useState(null)
@@ -60,7 +64,7 @@ export default function OrderQueuePage({ admin = false }) {
         await createTrustedShipment({
           orderId: order.id,
           carrierName: 'DrugTrack Logistics',
-          trackingNumber: `DT-TRK-${String(Date.now()).slice(-6)}`,
+          trackingNumber: generateTrackingNumber(),
         })
         toast.success('Shipment created.')
       } else {
