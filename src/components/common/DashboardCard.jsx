@@ -1,0 +1,1 @@
+export default function DashboardCard({title,description,icon:Icon}){return <article className="panel p-5">{Icon&&<Icon className="mb-4 text-brand-600"/>}<h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500">{description}</p></article>}

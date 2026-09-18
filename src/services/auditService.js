@@ -1,0 +1,1 @@
+import {createRecord}from'./firestoreCrud';export const logAudit=({userId,userRole,action,entityType,entityId,description,metadata={}})=>createRecord('auditLogs',{userId,userRole,action,entityType,entityId,description,metadata,timestamp:new Date()});

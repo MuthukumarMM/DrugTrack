@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function role() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role; }
+    function admin() { return signedIn() && role() == 'ADMIN'; }
+    function imageUpload() { return request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
+    match /drugs/{ownerId}/{allPaths=**} { allow read: if true; allow write: if signedIn() && (request.auth.uid == ownerId || admin()) && imageUpload(); }
+    match /organizations/{ownerId}/{allPaths=**} { allow read: if signedIn(); allow write: if signedIn() && (request.auth.uid == ownerId || admin()) && imageUpload(); }
+    match /proof-of-delivery/{deliveryId}/{allPaths=**} { allow read: if signedIn(); allow write: if signedIn() && (request.auth.uid == deliveryId || admin()) && imageUpload(); }
+    match /qr/{allPaths=**} { allow read: if true; allow write: if false; }
+  }
+}

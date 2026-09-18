@@ -1,0 +1,1 @@
+export default function Select({ label, children, ...props }) { return <label className="block text-sm font-medium text-slate-700">{label && <span className="mb-1.5 block">{label}</span>}<select className="field bg-white" {...props}>{children}</select></label> }

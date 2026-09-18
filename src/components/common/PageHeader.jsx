@@ -1,0 +1,1 @@
+export default function PageHeader({title,description}){return <header className="mb-7"><p className="text-sm font-semibold text-brand-600">DRUGTRACK</p><h1 className="mt-1 text-2xl font-bold">{title}</h1>{description&&<p className="mt-1 text-slate-500">{description}</p>}</header>}

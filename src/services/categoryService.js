@@ -1,0 +1,2 @@
+import {createRecord,deleteRecord,getRecords,subscribeRecords,updateRecord,orderBy}from'./firestoreCrud'
+const C='categories';export const createCategory=data=>createRecord(C,data);export const updateCategory=(id,data)=>updateRecord(C,id,data);export const deleteCategory=id=>deleteRecord(C,id);export const getCategories=()=>getRecords(C,[orderBy('name')]);export const subscribeCategories=cb=>subscribeRecords(C,cb,[orderBy('name')]);

@@ -1,0 +1,1 @@
+export default function EmptyState({title='Nothing here yet',description}){return <div className="panel p-10 text-center"><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500">{description}</p></div>}

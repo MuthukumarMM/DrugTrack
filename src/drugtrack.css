@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-50: #ecfeff;
+    --brand-100: #cffafe;
+    --brand-500: #14b8a6;
+    --brand-600: #0f766e;
+    --brand-700: #115e59;
+    --brand-900: #062d2b;
+    --ink-900: #0f172a;
+    --muted: #475569;
+    --panel: rgba(255, 255, 255, 0.8);
+    --line: rgba(148, 163, 184, 0.26);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-slate-50 text-slate-900 antialiased;
+    background:
+      radial-gradient(circle at top left, rgba(20, 184, 166, 0.12), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.1), transparent 24%),
+      #f8fafc;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[1.5rem] border border-slate-200 bg-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.06)];
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-700 transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100;
+  }
+
+  .brand-button {
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 px-5 py-3 font-semibold text-white shadow-[0_20px_32px_rgba(13,148,136,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_38px_rgba(13,148,136,0.28)];
+  }
+
+  .soft-button {
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:border-teal-500 hover:text-teal-700;
+  }
+
+  .section-shell {
+    @apply mx-auto max-w-7xl px-5;
+  }
+
+  .kpi-card {
+    @apply rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.04)];
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+

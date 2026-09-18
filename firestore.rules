@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+    function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function getUserRole() { return isAuthenticated() ? userDoc().data.role : null; }
+    function isAdmin() { return getUserRole() == 'ADMIN'; }
+    function isWarehouseManager() { return getUserRole() == 'WAREHOUSE_MANAGER'; }
+    function isDeliveryStaff() { return getUserRole() == 'DELIVERY_STAFF'; }
+    function organizationVerified() {
+      return (getUserRole() == 'MANUFACTURER' && get(/databases/$(database)/documents/manufacturers/$(request.auth.uid)).data.verificationStatus == 'APPROVED') ||
+        (getUserRole() == 'DISTRIBUTOR' && get(/databases/$(database)/documents/distributors/$(request.auth.uid)).data.verificationStatus == 'APPROVED') ||
+        (getUserRole() == 'PHARMACY' && get(/databases/$(database)/documents/pharmacies/$(request.auth.uid)).data.verificationStatus == 'APPROVED') ||
+        (getUserRole() == 'HOSPITAL' && get(/databases/$(database)/documents/hospitals/$(request.auth.uid)).data.verificationStatus == 'APPROVED') ||
+        (getUserRole() == 'WAREHOUSE_MANAGER' && get(/databases/$(database)/documents/warehouses/$(request.auth.uid)).data.verificationStatus == 'APPROVED');
+    }
+    function isOwner(userId) { return isAuthenticated() && request.auth.uid == userId; }
+    function ownProfile() { return isOwner(resource.data.userId); }
+    function inventoryValid() {
+      return request.resource.data.quantity is number &&
+        request.resource.data.reservedQuantity is number &&
+        request.resource.data.reorderLevel is number &&
+        request.resource.data.quantity >= 0 &&
+        request.resource.data.reservedQuantity >= 0 &&
+        request.resource.data.reorderLevel >= 0 &&
+        request.resource.data.reservedQuantity <= request.resource.data.quantity;
+    }
+    function userSafeUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','phone','photoURL','updatedAt','lastLoginAt']) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.status == resource.data.status;
+    }
+
+    match /users/{uid} {
+      allow create: if isOwner(uid) && request.resource.data.uid == uid && request.resource.data.role in ['MANUFACTURER','WAREHOUSE_MANAGER','DISTRIBUTOR','PHARMACY','HOSPITAL','CUSTOMER'];
+      allow read: if isOwner(uid) || isAdmin();
+      allow update: if (isOwner(uid) && userSafeUpdate()) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /manufacturers/{id} { allow create: if isOwner(request.resource.data.userId) && getUserRole() == 'MANUFACTURER'; allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /distributors/{id} { allow create: if isOwner(request.resource.data.userId) && getUserRole() == 'DISTRIBUTOR'; allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /pharmacies/{id} { allow create: if isOwner(request.resource.data.userId) && getUserRole() == 'PHARMACY'; allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /hospitals/{id} { allow create: if isOwner(request.resource.data.userId) && getUserRole() == 'HOSPITAL'; allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /warehouses/{id} { allow create: if isOwner(request.resource.data.userId) && isWarehouseManager(); allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /deliveryStaff/{id} { allow create: if isOwner(request.resource.data.userId) && isDeliveryStaff(); allow read: if ownProfile() || isAdmin(); allow update: if isAdmin() || (ownProfile() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','organizationId','verificationStatus'])); allow delete: if isAdmin(); }
+    match /customers/{id} {
+      allow create: if isOwner(request.resource.data.userId) && getUserRole() == 'CUSTOMER';
+      allow read: if ownProfile() || isAdmin();
+      allow update: if isAdmin() || (ownProfile() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId','email','createdAt']));
+      allow delete: if isAdmin();
+    }
+    match /carts/{id} {
+      allow create: if isOwner(id) && request.resource.data.customerId == id;
+      allow read, delete: if isOwner(id) || isAdmin();
+      allow update: if isAdmin() || (isOwner(id) && request.resource.data.customerId == id);
+    }
+    match /customers/{customerId}/addresses/{addressId} { allow create: if isOwner(customerId) && request.resource.data.keys().hasAll(['fullName','phone','addressLine1','city','state','postalCode','country']); allow read, update, delete: if isOwner(customerId) || isAdmin(); }
+    match /orders/{id} { allow read: if isAuthenticated() && (resource.data.customerId == request.auth.uid || resource.data.sellerId == request.auth.uid || isAdmin()); allow create, update, delete: if isAdmin(); }
+    match /shipments/{id} { allow read: if isAuthenticated() && (resource.data.destinationId == request.auth.uid || resource.data.sourceId == request.auth.uid || resource.data.distributorId == request.auth.uid || resource.data.assignedDeliveryStaffId == request.auth.uid || isAdmin()); allow create, update, delete: if isAdmin(); }
+    match /trackingEvents/{id} { allow read: if isAuthenticated() && (isAdmin() || get(/databases/$(database)/documents/shipments/$(resource.data.shipmentId)).data.destinationId == request.auth.uid || get(/databases/$(database)/documents/shipments/$(resource.data.shipmentId)).data.sourceId == request.auth.uid || get(/databases/$(database)/documents/shipments/$(resource.data.shipmentId)).data.distributorId == request.auth.uid || get(/databases/$(database)/documents/shipments/$(resource.data.shipmentId)).data.assignedDeliveryStaffId == request.auth.uid); allow write: if isAdmin(); }
+    match /notifications/{id} {
+      allow create: if isAdmin();
+      allow read, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']) &&
+        request.resource.data.userId == resource.data.userId);
+    }
+    match /reviews/{id} { allow read: if isAuthenticated(); allow create: if isAuthenticated() && request.resource.data.customerId == request.auth.uid && request.resource.data.rating >= 1 && request.resource.data.rating <= 5; allow update, delete: if isAuthenticated() && resource.data.customerId == request.auth.uid; }
+    match /inventory/{id} {
+      allow create: if isAdmin() || (organizationVerified() && inventoryValid() && request.resource.data.ownerId == request.auth.uid && request.resource.data.ownerType == getUserRole());
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+      allow update: if isAdmin() || (isAuthenticated() && inventoryValid() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.ownerType == resource.data.ownerType);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+    }
+    match /drugs/{id} {
+      allow create: if isAdmin() || (organizationVerified() && getUserRole() == 'MANUFACTURER' && request.resource.data.manufacturerId == request.auth.uid);
+      allow read: if isAuthenticated();
+      allow update, delete: if isAdmin() || (getUserRole() == 'MANUFACTURER' && resource.data.manufacturerId == request.auth.uid && request.resource.data.manufacturerId == resource.data.manufacturerId);
+    }
+    match /drugBatches/{id} {
+      allow create: if isAdmin() || (organizationVerified() && getUserRole() == 'MANUFACTURER' && request.resource.data.manufacturerId == request.auth.uid);
+      allow read: if isAuthenticated();
+      allow update, delete: if isAdmin() || (getUserRole() == 'MANUFACTURER' && resource.data.manufacturerId == request.auth.uid && request.resource.data.manufacturerId == resource.data.manufacturerId);
+    }
+    match /categories/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /catalogue/{id} { allow read: if true; allow write: if false; }
+    match /contactMessages/{id} { allow create: if request.resource.data.keys().hasAll(['name','email','subject','message','createdAt']); allow read, update, delete: if isAdmin(); }
+    match /auditLogs/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /{collection}/{id} { allow read,write: if isAdmin(); }
+  }
+}
