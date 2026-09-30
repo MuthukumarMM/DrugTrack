@@ -132,7 +132,7 @@ export function AddressesPage() {
 }
 
 export function OrdersPage({ history = false }) {
-  const { currentUser } = useAuth()
+  const { currentUser, role } = useAuth()
   const [rows, setRows] = useState(null)
 
   useEffect(() => subscribeOrders(currentUser.uid, setRows), [currentUser])
@@ -143,6 +143,8 @@ export function OrdersPage({ history = false }) {
   }, [rows, history])
 
   if (!rows) return <LoadingSpinner />
+
+  const buyerBasePath = role === 'PHARMACY' ? '/pharmacy' : role === 'HOSPITAL' ? '/hospital' : ''
 
   return (
     <>
@@ -167,11 +169,11 @@ export function OrdersPage({ history = false }) {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <StatusBadge status={order.orderStatus} />
-                <Link className="text-sm font-semibold text-brand-700" to={`/orders/${order.id}`}>
+                <Link className="text-sm font-semibold text-brand-700" to={`${buyerBasePath}/orders/${order.id}`}>
                   View
                 </Link>
                 {order.shipmentId && (
-                  <Link className="text-sm font-semibold text-brand-700" to={`/track/${order.shipmentId}`}>
+                  <Link className="text-sm font-semibold text-brand-700" to={`${buyerBasePath}/track/${order.shipmentId}`}>
                     Track
                   </Link>
                 )}
@@ -186,6 +188,7 @@ export function OrdersPage({ history = false }) {
 
 export function OrderDetailPage() {
   const { orderId } = useParams()
+  const { role } = useAuth()
   const [order, setOrder] = useState(undefined)
   const [review, setReview] = useState({ deliveryRating: 5, serviceRating: 5, comment: '' })
   const [busy, setBusy] = useState(false)
@@ -194,6 +197,8 @@ export function OrderDetailPage() {
 
   if (order === undefined) return <LoadingSpinner />
   if (!order) return <EmptyState title="Order not found" description="This order is unavailable or you do not have access." />
+
+  const buyerBasePath = role === 'PHARMACY' ? '/pharmacy' : role === 'HOSPITAL' ? '/hospital' : ''
 
   const currentIndex = timeline.indexOf(order.orderStatus)
   const confirmReceipt = async () => {
@@ -236,7 +241,7 @@ export function OrderDetailPage() {
               <div className="flex justify-between border-t pt-2 text-base font-bold"><dt>Total</dt><dd>{currency(order.totalAmount)}</dd></div>
             </dl>
             {order.shipmentId && (
-              <Link className="mt-5 block rounded-xl bg-brand-600 px-4 py-2.5 text-center font-semibold text-white" to={`/track/${order.shipmentId}`}>
+              <Link className="mt-5 block rounded-xl bg-brand-600 px-4 py-2.5 text-center font-semibold text-white" to={`${buyerBasePath}/track/${order.shipmentId}`}>
                 Track shipment
               </Link>
             )}
@@ -263,6 +268,27 @@ export function OrderDetailPage() {
             </div>
           ))}
         </div>
+      </section>
+      <section className="panel mt-5 p-5">
+        <h2 className="text-lg font-bold text-slate-950">Live approval history</h2>
+        <p className="mt-1 text-sm text-slate-500">Every operational handoff is recorded as the order moves from manufacturer to recipient.</p>
+        {!order.orderHistory?.length ? (
+          <p className="mt-4 text-sm text-slate-400">History will appear after the first workflow update.</p>
+        ) : (
+          <ol className="mt-5 space-y-4 border-l-2 border-teal-100 pl-5">
+            {[...order.orderHistory].reverse().map((event, index) => (
+              <li key={`${event.status}-${event.at}-${index}`} className="relative">
+                <span className="absolute -left-[26px] top-1 h-3 w-3 rounded-full border-2 border-white bg-teal-600 shadow-sm" />
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-semibold text-slate-900">{event.status.replaceAll('_', ' ')}</p>
+                  <time className="text-xs text-slate-400">{toDate(event.at)}</time>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{event.message}</p>
+                {event.actorRole && <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-teal-700">{event.actorRole.replaceAll('_', ' ')}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
       {order.orderStatus === 'RECIPIENT_CONFIRMED' && (
         <form onSubmit={submitReview} className="panel mt-5 grid gap-3 p-5 sm:grid-cols-2">

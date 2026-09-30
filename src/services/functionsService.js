@@ -15,6 +15,22 @@ const toCanonicalOrder = record => {
   return { ...record, status: nextStatus, orderStatus: nextStatus }
 }
 
+const appendOrderHistory = (order, status, actor = {}) => ({
+  orderHistory:
+    order.orderHistory?.at(-1)?.status === status
+      ? order.orderHistory
+      : [
+          ...(order.orderHistory || []),
+          {
+            status,
+            at: new Date().toISOString(),
+            actorId: actor.actorId || '',
+            actorRole: actor.actorRole || '',
+            message: actor.message || `Order moved to ${status.replaceAll('_', ' ').toLowerCase()}.`,
+          },
+        ],
+})
+
 export const createTrustedOrder = async data => {
   const payload = {
     buyerId: data.buyerId || data.customerId || data.userId,
@@ -49,18 +65,35 @@ export const createTrustedOrder = async data => {
   }
 
   const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`
+  const firstItem = data.items?.[0] || {}
   const orderRecord = toCanonicalOrder({
     ...data,
     orderNumber,
+    customerId: data.customerId || payload.buyerId,
     buyerId: payload.buyerId,
     buyerRole: payload.buyerRole,
+    sellerId: data.sellerId || firstItem.sellerId || '',
+    sellerType: data.sellerType || firstItem.sellerType || '',
+    sellerName: data.sellerName || firstItem.sellerName || '',
+    manufacturerId: data.manufacturerId || firstItem.manufacturerId || 'demo-manufacturer',
+    manufacturerName: data.manufacturerName || firstItem.manufacturerName || 'Mehta Pharma Labs',
+    distributorId: data.distributorId || firstItem.distributorId || 'demo-distributor',
+    distributorName: data.distributorName || firstItem.distributorName || 'Kapoor Health Distributors',
     items: payload.items,
     subtotal: payload.subtotal,
+    deliveryFee: Math.max(0, Number(data.totalAmount || 0) - payload.subtotal),
     totalAmount: payload.totalAmount,
     deliveryAddress: payload.deliveryAddress,
     paymentMethod: payload.paymentMethod,
     status: 'PENDING',
     orderStatus: 'PENDING',
+    orderHistory: [{
+      status: 'PENDING',
+      at: new Date().toISOString(),
+      actorId: payload.buyerId,
+      actorRole: payload.buyerRole,
+      message: 'Order placed and awaiting manufacturer review.',
+    }],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -93,7 +126,18 @@ export const updateTrustedOrderStatus = async data => {
       throw err
     }
   }
-  const target = toCanonicalOrder({ ...getMockCollection('orders')?.find(order => order.id === orderId), status: nextStatus, orderStatus: nextStatus, rejectionReason })
+  const existing = getMockCollection('orders')?.find(order => order.id === orderId)
+  const target = toCanonicalOrder({
+    ...existing,
+    status: nextStatus,
+    orderStatus: nextStatus,
+    rejectionReason,
+    ...appendOrderHistory(existing || {}, nextStatus, {
+      actorId: data.actorId,
+      actorRole: data.actorRole,
+      message: rejectionReason || undefined,
+    }),
+  })
   updateMockRecord('orders', orderId, target)
   return { success: true, status: nextStatus }
 }
@@ -108,13 +152,22 @@ export const createTrustedShipment = async data => {
     })
     return result.data
   }
+  const order = getMockCollection('orders')?.find(item => item.id === data.orderId)
   const shipment = createMockRecord('shipments', {
     ...data,
+    orderNumber: order?.orderNumber || data.orderId,
+    customerId: order?.customerId || order?.buyerId || '',
+    recipient: order?.deliveryAddress || {},
     shipmentNumber: `DT-SHP-${String(Date.now()).slice(-6)}`,
     status: 'ASSIGNED',
     simulatedGps: true,
   })
-  updateMockRecord('orders', data.orderId, { shipmentId: shipment.id, orderStatus: 'READY_FOR_DELIVERY', status: 'READY_FOR_DELIVERY' })
+  updateMockRecord('orders', data.orderId, {
+    shipmentId: shipment.id,
+    orderStatus: 'READY_FOR_DELIVERY',
+    status: 'READY_FOR_DELIVERY',
+    ...appendOrderHistory(order || {}, 'READY_FOR_DELIVERY', { actorRole: 'DISTRIBUTOR' }),
+  })
   return { shipmentId: shipment.id, shipmentNumber: shipment.shipmentNumber }
 }
 
@@ -126,25 +179,47 @@ export const assignTrustedShipment = async data => {
 
 export const updateTrustedShipmentStatus = async data => {
   if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('updateShipmentStatus')(data)).data
+  const shipment = getMockCollection('shipments')?.find(item => item.id === data.shipmentId)
   updateMockRecord('shipments', data.shipmentId, {
     status: data.status,
     currentLatitude: Number(data.latitude),
     currentLongitude: Number(data.longitude),
     estimatedDelivery: data.estimatedDelivery || null,
   })
+  if (shipment?.orderId) {
+    const order = getMockCollection('orders')?.find(item => item.id === shipment.orderId)
+    const orderStatus = data.status === 'DELIVERED' ? 'DELIVERED' : data.status === 'OUT_FOR_DELIVERY' ? 'READY_FOR_DELIVERY' : order?.orderStatus
+    if (orderStatus && orderStatus !== order?.orderStatus) {
+      updateMockRecord('orders', shipment.orderId, {
+        status: orderStatus,
+        orderStatus,
+        ...appendOrderHistory(order || {}, orderStatus, { actorRole: 'DELIVERY_STAFF' }),
+      })
+    }
+  }
   createMockRecord('trackingEvents', { shipmentId: data.shipmentId, status: data.status, message: data.message || '', timestamp: new Date().toISOString() })
   return { ok: true, status: data.status }
 }
 
 export const confirmTrustedDelivery = async orderId => {
   if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('confirmDelivery')({ orderId })).data
-  updateMockRecord('orders', orderId, { orderStatus: 'RECIPIENT_CONFIRMED', status: 'RECIPIENT_CONFIRMED' })
+  const order = getMockCollection('orders')?.find(item => item.id === orderId)
+  updateMockRecord('orders', orderId, {
+    orderStatus: 'RECIPIENT_CONFIRMED',
+    status: 'RECIPIENT_CONFIRMED',
+    ...appendOrderHistory(order || {}, 'RECIPIENT_CONFIRMED', { actorRole: 'RECIPIENT' }),
+  })
   return { ok: true }
 }
 
 export const createTrustedReview = async data => {
   if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('createReview')(data)).data
-  updateMockRecord('orders', data.orderId, { orderStatus: 'COMPLETED', status: 'COMPLETED' })
+  const order = getMockCollection('orders')?.find(item => item.id === data.orderId)
+  updateMockRecord('orders', data.orderId, {
+    orderStatus: 'COMPLETED',
+    status: 'COMPLETED',
+    ...appendOrderHistory(order || {}, 'COMPLETED', { actorRole: 'RECIPIENT', message: 'Recipient rated the delivery and completed the order.' }),
+  })
   createMockRecord('reviews', { ...data, userId: data.userId || 'demo-customer' })
   return { ok: true }
 }

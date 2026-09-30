@@ -12,10 +12,11 @@ function formatMoney(amount) {
 }
 
 export default function CartPage() {
-  const { currentUser } = useAuth()
+  const { currentUser, role } = useAuth()
   const navigate = useNavigate()
   const [cart, setCart] = useState(null)
   const [updating, setUpdating] = useState(false)
+  const buyerBasePath = role === 'PHARMACY' ? '/pharmacy' : role === 'HOSPITAL' ? '/hospital' : ''
 
   useEffect(() => {
     if (!currentUser) return undefined
@@ -253,7 +254,7 @@ export default function CartPage() {
 
               <button
                 type="button"
-                onClick={() => navigate('/checkout')}
+                onClick={() => navigate(`${buyerBasePath}/checkout`)}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition"
               >
                 Proceed to Checkout

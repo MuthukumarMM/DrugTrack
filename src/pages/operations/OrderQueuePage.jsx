@@ -55,14 +55,14 @@ export default function OrderQueuePage({ admin = false }) {
 
     setBusyId(order.id)
     try {
-      await updateTrustedOrderStatus({ orderId: order.id, status: action })
+      await updateTrustedOrderStatus({ orderId: order.id, status: action, actorId: currentUser.uid, actorRole: role })
       toast.success('Order updated.')
     } catch (error) {
       const failures = error.details?.failures || error.customData?.failures || []
       if (action === 'APPROVED' && failures.length) {
         const rejectionReason = window.prompt(`Validation failed (${failures.map(item => item.code).join(', ')}). Enter a rejection reason.`)?.trim()
         if (rejectionReason) {
-          await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason: failures.map(item => item.code).join(', ') })
+          await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason: failures.map(item => item.code).join(', '), actorId: currentUser.uid, actorRole: role })
           toast.success('Order rejected and buyer notified.')
           return
         }
@@ -80,7 +80,7 @@ export default function OrderQueuePage({ admin = false }) {
     if (!validationReason) return
     setBusyId(order.id)
     try {
-      await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason })
+      await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason, actorId: currentUser.uid, actorRole: role })
       toast.success('Order rejected.')
     } catch (error) {
       toast.error(error.message || 'Unable to reject order.')
@@ -93,7 +93,7 @@ export default function OrderQueuePage({ admin = false }) {
     if (!confirm(`Cancel ${order.orderNumber}? Reserved stock will be released by the Function.`)) return
     setBusyId(order.id)
     try {
-      await updateTrustedOrderStatus({ orderId: order.id, status: 'CANCELLED' })
+      await updateTrustedOrderStatus({ orderId: order.id, status: 'CANCELLED', actorId: currentUser.uid, actorRole: role })
       toast.success('Order cancelled.')
     } catch (error) {
       toast.error(error.message || 'Unable to cancel order.')

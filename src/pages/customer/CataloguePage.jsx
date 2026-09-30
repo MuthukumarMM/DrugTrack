@@ -87,6 +87,13 @@ export default function CataloguePage() {
         availableQuantity: Number(item.availableQuantity || 0),
         drugName: item.name,
         imageUrl: item.imageUrl || '',
+        sellerId: item.sellerId,
+        sellerType: item.sellerType,
+        sellerName: item.sellerName,
+        manufacturerId: item.manufacturerId,
+        manufacturerName: item.manufacturerName,
+        distributorId: item.distributorId,
+        distributorName: item.distributorName,
       })
       toast.success(`Added ${qty} × ${item.name} to cart`)
     } catch (error) {

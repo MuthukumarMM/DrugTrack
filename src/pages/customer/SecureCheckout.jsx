@@ -45,13 +45,14 @@ function money(value) {
 }
 
 export default function SecureCheckout() {
-  const { currentUser } = useAuth()
+  const { currentUser, role } = useAuth()
   const [cart, setCart] = useState(null)
   const [addresses, setAddresses] = useState(null)
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [address, setAddress] = useState(blankAddress)
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  const buyerBasePath = role === 'PHARMACY' ? '/pharmacy' : role === 'HOSPITAL' ? '/hospital' : ''
 
   useEffect(() => {
     if (!currentUser) return undefined
@@ -123,7 +124,8 @@ export default function SecureCheckout() {
     try {
       const result = await createTrustedOrder({
         buyerId: currentUser.uid,
-        buyerRole: 'CUSTOMER',
+        buyerName: currentUser.displayName || currentUser.email,
+        buyerRole: role || 'CUSTOMER',
         items,
         subtotal: itemsSubtotal,
         totalAmount: estimatedTotal,
@@ -131,7 +133,7 @@ export default function SecureCheckout() {
         paymentMethod: 'CASH_ON_DELIVERY',
       })
       toast.success('Order placed successfully! Stock reserved.')
-      navigate(`/orders/${result.orderId}`, { replace: true })
+      navigate(`${buyerBasePath}/orders/${result.orderId}`, { replace: true })
     } catch (error) {
       toast.error(error.message || 'Unable to place order. Please try again.')
     } finally {

@@ -30,12 +30,18 @@ export const roleLinks = {
   ],
   PHARMACY: [
     { label: 'Dashboard', to: '/pharmacy' },
+    { label: 'Order Medicines', to: '/pharmacy/order' },
+    { label: 'My Purchases', to: '/pharmacy/purchases' },
+    { label: 'Order History', to: '/pharmacy/history' },
     { label: 'Pharmacy Stock', to: '/pharmacy/my-inventory' },
     { label: 'Customer Orders', to: '/pharmacy/orders' },
     { label: 'Profile', to: '/pharmacy/profile' },
   ],
   HOSPITAL: [
     { label: 'Dashboard', to: '/hospital' },
+    { label: 'Order Medicines', to: '/hospital/order' },
+    { label: 'My Purchases', to: '/hospital/purchases' },
+    { label: 'Order History', to: '/hospital/history' },
     { label: 'Department Stock', to: '/hospital/inventory' },
     { label: 'Hospital Orders', to: '/hospital/orders' },
     { label: 'Profile', to: '/hospital/profile' },

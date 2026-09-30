@@ -27,7 +27,7 @@ function currency(value) {
 }
 
 export default function DistributorOrderQueue() {
-  const { currentUser } = useAuth()
+  const { currentUser, role } = useAuth()
   const [orders, setOrders] = useState(null)
   const [staffRows, setStaffRows] = useState([])
   const [busyId, setBusyId] = useState('')
@@ -36,16 +36,17 @@ export default function DistributorOrderQueue() {
   useEffect(() => subscribeOrders(currentUser.uid, setOrders, true, 'distributorId'), [currentUser])
   useEffect(() => subscribeRecords('users', setStaffRows, [where('role', '==', ROLES.DELIVERY_STAFF)]), [])
   useEffect(() => {
-    if (staffRows[0]?.uid || staffRows[0]?.id) setStaff(staffRows[0].uid || staffRows[0].id)
+    const firstStaff = staffRows.find(person => person.role === ROLES.DELIVERY_STAFF)
+    if (firstStaff?.uid || firstStaff?.id) setStaff(firstStaff.uid || firstStaff.id)
   }, [staffRows])
 
   const visible = useMemo(() => (orders || []).filter(order => !['REJECTED', 'CANCELLED', 'COMPLETED'].includes(order.orderStatus)), [orders])
-  const staffOptions = staffRows.length ? staffRows : deliveryStaff
+  const staffOptions = (staffRows.length ? staffRows : deliveryStaff).filter(person => person.role === ROLES.DELIVERY_STAFF)
 
   const transition = async (order, status) => {
     setBusyId(order.id)
     try {
-      await updateTrustedOrderStatus({ orderId: order.id, status })
+      await updateTrustedOrderStatus({ orderId: order.id, status, actorId: currentUser.uid, actorRole: role })
       toast.success(`Order moved to ${status.replaceAll('_', ' ').toLowerCase()}.`)
     } catch (error) {
       toast.error(error.message || 'Unable to update order.')
@@ -59,7 +60,7 @@ export default function DistributorOrderQueue() {
     if (!rejectionReason) return
     setBusyId(order.id)
     try {
-      await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason: 'DISTRIBUTOR_STOCK_CHECK_FAILED' })
+      await updateTrustedOrderStatus({ orderId: order.id, status: 'REJECTED', rejectionReason, validationReason: 'DISTRIBUTOR_STOCK_CHECK_FAILED', actorId: currentUser.uid, actorRole: role })
       toast.success('Order rejected and buyer notified.')
     } catch (error) {
       toast.error(error.message || 'Unable to reject order.')
