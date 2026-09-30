@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { markNotificationRead, subscribeNotifications } from '../../services/notificationService'
 import { removeAddress, saveAddress, subscribeAddresses } from '../../services/addressService'
 import { subscribeOrder, subscribeOrders } from '../../services/orderService'
+import { confirmTrustedDelivery, createTrustedReview } from '../../services/functionsService'
 
 const blankAddress = {
   fullName: '',
@@ -22,8 +23,8 @@ const blankAddress = {
   isDefault: false,
 }
 
-const timeline = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED']
-const historyStatuses = new Set(['COMPLETED', 'CANCELLED', 'RETURNED'])
+const timeline = ['PENDING', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_ACCEPTED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED', 'COMPLETED']
+const historyStatuses = new Set(['COMPLETED', 'CANCELLED', 'REJECTED'])
 
 function currency(value) {
   return `Rs. ${Number(value || 0).toFixed(2)}`
@@ -186,6 +187,8 @@ export function OrdersPage({ history = false }) {
 export function OrderDetailPage() {
   const { orderId } = useParams()
   const [order, setOrder] = useState(undefined)
+  const [review, setReview] = useState({ deliveryRating: 5, serviceRating: 5, comment: '' })
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => subscribeOrder(orderId, setOrder), [orderId])
 
@@ -193,6 +196,15 @@ export function OrderDetailPage() {
   if (!order) return <EmptyState title="Order not found" description="This order is unavailable or you do not have access." />
 
   const currentIndex = timeline.indexOf(order.orderStatus)
+  const confirmReceipt = async () => {
+    setBusy(true)
+    try { await confirmTrustedDelivery(order.id); toast.success('Receipt confirmed.') } catch (error) { toast.error(error.message || 'Unable to confirm receipt.') } finally { setBusy(false) }
+  }
+  const submitReview = async event => {
+    event.preventDefault()
+    setBusy(true)
+    try { await createTrustedReview({ orderId: order.id, shipmentId: order.shipmentId, ...review }); toast.success('Thank you for your review.') } catch (error) { toast.error(error.message || 'Unable to submit review.') } finally { setBusy(false) }
+  }
 
   return (
     <>
@@ -228,6 +240,7 @@ export function OrderDetailPage() {
                 Track shipment
               </Link>
             )}
+            {order.orderStatus === 'DELIVERED' && <button disabled={busy} onClick={confirmReceipt} className="mt-3 block w-full rounded-xl border border-teal-200 px-4 py-2.5 text-center font-semibold text-brand-700">Confirm receipt</button>}
           </section>
 
           <section className="panel p-5">
@@ -251,6 +264,15 @@ export function OrderDetailPage() {
           ))}
         </div>
       </section>
+      {order.orderStatus === 'RECIPIENT_CONFIRMED' && (
+        <form onSubmit={submitReview} className="panel mt-5 grid gap-3 p-5 sm:grid-cols-2">
+          <h2 className="text-lg font-bold text-slate-950 sm:col-span-2">Rate this delivery</h2>
+          <label className="text-sm font-semibold">Delivery rating<select className="field mt-1 w-full" value={review.deliveryRating} onChange={event => setReview({ ...review, deliveryRating: event.target.value })}>{[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value} / 5</option>)}</select></label>
+          <label className="text-sm font-semibold">Order service rating<select className="field mt-1 w-full" value={review.serviceRating} onChange={event => setReview({ ...review, serviceRating: event.target.value })}>{[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value} / 5</option>)}</select></label>
+          <textarea className="field min-h-24 sm:col-span-2" placeholder="Write a review" value={review.comment} onChange={event => setReview({ ...review, comment: event.target.value })} />
+          <button disabled={busy} className="rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white sm:col-span-2">Submit review</button>
+        </form>
+      )}
     </>
   )
 }

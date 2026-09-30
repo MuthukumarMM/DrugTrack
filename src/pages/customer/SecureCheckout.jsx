@@ -121,7 +121,15 @@ export default function SecureCheckout() {
 
     setBusy(true)
     try {
-      const result = await createTrustedOrder({ address, paymentMethod: 'CASH_ON_DELIVERY' })
+      const result = await createTrustedOrder({
+        buyerId: currentUser.uid,
+        buyerRole: 'CUSTOMER',
+        items,
+        subtotal: itemsSubtotal,
+        totalAmount: estimatedTotal,
+        address,
+        paymentMethod: 'CASH_ON_DELIVERY',
+      })
       toast.success('Order placed successfully! Stock reserved.')
       navigate(`/orders/${result.orderId}`, { replace: true })
     } catch (error) {

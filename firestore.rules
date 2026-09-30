@@ -81,18 +81,7 @@ service cloud.firestore {
         resource.data.distributorId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isAuthenticated() && (
-        request.resource.data.customerId == request.auth.uid ||
-        request.resource.data.createdBy == request.auth.uid ||
-        isAdmin()
-      );
-      allow update: if isAuthenticated() && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.sellerId == request.auth.uid ||
-        resource.data.manufacturerId == request.auth.uid ||
-        resource.data.distributorId == request.auth.uid ||
-        isAdmin()
-      );
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -105,40 +94,36 @@ service cloud.firestore {
         resource.data.customerId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        resource.data.destinationId == request.auth.uid ||
-        resource.data.sourceId == request.auth.uid ||
-        resource.data.distributorId == request.auth.uid ||
-        resource.data.assignedDeliveryStaffId == request.auth.uid ||
-        isAdmin()
-      );
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     match /trackingEvents/{id} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if false;
       allow update, delete: if isAdmin();
     }
 
     match /notifications/{id} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
+      allow create: if false;
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /reviews/{id} {
       allow read: if true;
-      allow create: if isAuthenticated() && request.resource.data.customerId == request.auth.uid;
+      allow create: if false;
       allow update, delete: if isAuthenticated() && resource.data.customerId == request.auth.uid;
     }
 
     match /inventory/{id} {
       allow read: if true;
       allow create: if isAuthenticated() && (isAdmin() || request.resource.data.ownerId == request.auth.uid);
-      allow update: if isAuthenticated() && (isAdmin() || resource.data.ownerId == request.auth.uid);
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (resource.data.ownerId == request.auth.uid && request.resource.data.reservedQuantity == resource.data.reservedQuantity)
+      );
       allow delete: if isAuthenticated() && (isAdmin() || resource.data.ownerId == request.auth.uid);
     }
 
@@ -171,7 +156,7 @@ service cloud.firestore {
 
     match /auditLogs/{id} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated();
+      allow create: if false;
       allow update, delete: if isAdmin();
     }
 

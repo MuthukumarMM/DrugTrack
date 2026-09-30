@@ -4,13 +4,14 @@ import { useAuth } from '../../context/AuthContext'
 import { signOutUser } from '../../services/authService'
 
 export default function AccountStatusPage() {
-  const { currentUser, profile, profileError } = useAuth()
+  const { currentUser, profile, profileError, clearSession } = useAuth()
   const navigate = useNavigate()
   const blocked = profile?.status === 'SUSPENDED' || profile?.status === 'REJECTED'
   const missingProfile = currentUser && !profile
 
   const signOut = async () => {
     await signOutUser()
+    clearSession()
     navigate('/login', { replace: true })
   }
 

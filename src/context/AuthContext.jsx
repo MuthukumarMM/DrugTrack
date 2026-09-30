@@ -2,16 +2,23 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '../firebase/config'
 import { getUserProfile, updateLastLogin } from '../services/userService'
+import { isDemoMode } from '../firebase/mode'
 
 const AuthContext = createContext(null)
-
-const demoMode = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
+const DEMO_SESSION_KEY = 'drugtrack_demo_user'
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [profileError, setProfileError] = useState('')
   const [loading, setLoading] = useState(true)
+
+  const clearSession = () => {
+    if (isDemoMode) sessionStorage.removeItem(DEMO_SESSION_KEY)
+    setCurrentUser(null)
+    setProfile(null)
+    setProfileError('')
+  }
 
   const loadProfile = async user => {
     if (!user) {
@@ -24,7 +31,7 @@ export function AuthProvider({ children }) {
       const data = await getUserProfile(user.uid)
       if (!data) {
         setProfile(null)
-        setProfileError('Your account exists, but the DrugTrack profile document is missing.')
+        setProfileError('Your Firebase account exists, but the DrugTrack profile document is missing.')
         return null
       }
 
@@ -39,23 +46,37 @@ export function AuthProvider({ children }) {
     }
   }
 
-  useEffect(() => {
-    if (!isFirebaseConfigured || demoMode) {
-      try {
-        const saved = typeof window !== 'undefined' ? localStorage.getItem('drugtrack_demo_user') : null
-        if (saved) {
-          const user = JSON.parse(saved)
-          setCurrentUser(user)
-          loadProfile(user).finally(() => setLoading(false))
-          return undefined
-        }
-      } catch (e) {
-        console.warn('Failed to load demo user', e)
-      }
+  const setAuthenticatedUser = async user => {
+    if (!user) {
+      clearSession()
+      return null
+    }
+    if (isDemoMode) sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(user))
+    setCurrentUser(user)
+    return loadProfile(user)
+  }
 
+  useEffect(() => {
+    if (isDemoMode) {
+      let savedUser = null
+      try {
+        savedUser = JSON.parse(sessionStorage.getItem(DEMO_SESSION_KEY) || 'null')
+      } catch {
+        sessionStorage.removeItem(DEMO_SESSION_KEY)
+      }
+      if (savedUser?.uid) {
+        setCurrentUser(savedUser)
+        loadProfile(savedUser).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
+      }
+      return undefined
+    }
+
+    if (!isFirebaseConfigured) {
       setCurrentUser(null)
       setProfile(null)
-      setProfileError('')
+      setProfileError('Firebase environment values are not configured.')
       setLoading(false)
       return undefined
     }
@@ -85,13 +106,10 @@ export function AuthProvider({ children }) {
       role: profile?.role,
       loading,
       isConfigured: isFirebaseConfigured,
-      demoMode,
-      refreshProfile: async user => {
-        if (user) {
-          setCurrentUser(user)
-        }
-        return loadProfile(user || currentUser)
-      },
+      isDemoMode,
+      setAuthenticatedUser,
+      clearSession,
+      refreshProfile: user => loadProfile(user || currentUser),
     }),
     [currentUser, profile, profileError, loading],
   )

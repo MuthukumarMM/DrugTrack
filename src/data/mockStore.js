@@ -172,6 +172,22 @@ const initialBatches = [
     temperatureRange: '20°C - 25°C',
     createdAt: new Date('2025-02-15').toISOString(),
   },
+  {
+    id: 'batch-pcm-004',
+    batchNumber: 'BTH-PCM-2024-004',
+    drugId: 'drug-pcm-650',
+    drugName: 'Paracetamol 650mg Fast-Release',
+    manufacturerId: 'demo-manufacturer',
+    manufacturerName: 'Mehta Pharma Labs',
+    manufacturingDate: '2025-03-01',
+    expiryDate: '2027-03-01',
+    quantity: 5000,
+    remainingQuantity: 4800,
+    verificationToken: 'DT-VER-PCM-4413',
+    status: 'APPROVED',
+    temperatureRange: '15°C - 25°C',
+    createdAt: new Date('2025-03-01').toISOString(),
+  },
 ]
 
 const initialInventory = [
@@ -196,9 +212,9 @@ const initialInventory = [
   {
     id: 'inv-pcm-02',
     drugId: 'drug-pcm-650',
-    batchId: 'batch-pcm-002',
+    batchId: 'batch-pcm-004',
     drugName: 'Paracetamol 650mg Fast-Release',
-    batchNumber: 'BTH-PCM-2024-002',
+    batchNumber: 'BTH-PCM-2024-004',
     ownerId: 'demo-pharmacy',
     ownerType: 'PHARMACY',
     ownerName: 'Nair Care Pharmacy',
@@ -207,7 +223,7 @@ const initialInventory = [
     reorderLevel: 100,
     sellingPrice: 30,
     unitPrice: 30,
-    expiryDate: '2027-02-01',
+    expiryDate: '2027-03-01',
     status: 'IN_STOCK',
     createdAt: new Date('2025-02-12').toISOString(),
   },
@@ -339,7 +355,8 @@ const initialOrders = [
     customerName: 'Aisha Verma',
     sellerId: 'demo-pharmacy',
     sellerName: 'Nair Care Pharmacy',
-    status: 'IN_DELIVERY',
+    status: 'UNDER_REVIEW',
+    orderStatus: 'UNDER_REVIEW',
     items: [
       {
         drugId: 'drug-amx-500',
@@ -373,7 +390,8 @@ const initialOrders = [
     customerName: 'Aisha Verma',
     sellerId: 'demo-pharmacy',
     sellerName: 'Nair Care Pharmacy',
-    status: 'DELIVERED',
+    status: 'APPROVED',
+    orderStatus: 'APPROVED',
     items: [
       {
         drugId: 'drug-ibu-400',

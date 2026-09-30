@@ -1,70 +1,77 @@
 import { getFunctions, httpsCallable } from 'firebase/functions'
-import { addDoc, collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
-import { db, firebaseSetupError, isFirebaseConfigured } from '../firebase/config'
+import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
+import { db, firebaseSetupError, functions, isFirebaseConfigured } from '../firebase/config'
 import { createMockRecord, getMockCollection, updateMockRecord } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
+import { normalizeOrderStatus } from '../constants/statuses'
 
 const call = name => {
   if (!isFirebaseConfigured) throw Error(firebaseSetupError)
-  return httpsCallable(getFunctions(), name)
+  return httpsCallable(functions || getFunctions(), name)
+}
+
+const toCanonicalOrder = record => {
+  const nextStatus = normalizeOrderStatus(record.orderStatus || record.status)
+  return { ...record, status: nextStatus, orderStatus: nextStatus }
 }
 
 export const createTrustedOrder = async data => {
+  const payload = {
+    buyerId: data.buyerId || data.customerId || data.userId,
+    buyerRole: data.buyerRole || 'CUSTOMER',
+    address: data.address || data.deliveryAddress || {},
+    paymentMethod: data.paymentMethod || 'CASH_ON_DELIVERY',
+    items: Array.isArray(data.items) ? data.items.map(item => ({
+      inventoryId: item.inventoryId,
+      drugId: item.drugId,
+      batchId: item.batchId,
+      quantity: Number(item.quantity || 0),
+      unitPrice: Number(item.unitPrice || item.price || 0),
+      total: Number(item.total || (Number(item.quantity || 0) * Number(item.unitPrice || item.price || 0))),
+      drugName: item.drugName || item.name || '',
+      imageUrl: item.imageUrl || '',
+    })) : [],
+    subtotal: Number(data.subtotal || 0),
+    totalAmount: Number(data.totalAmount || data.total || 0),
+    deliveryAddress: data.address || data.deliveryAddress || {},
+  }
+
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) {
+    try {
+      const fn = call('createOrder')
+      const result = await fn(payload)
+      const orderId = result?.data?.orderId
+      const orderNumber = result?.data?.orderNumber
+      return { orderId, orderNumber }
+    } catch (err) {
+      throw err
+    }
+  }
+
   const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`
-  const orderRecord = {
+  const orderRecord = toCanonicalOrder({
     ...data,
     orderNumber,
+    buyerId: payload.buyerId,
+    buyerRole: payload.buyerRole,
+    items: payload.items,
+    subtotal: payload.subtotal,
+    totalAmount: payload.totalAmount,
+    deliveryAddress: payload.deliveryAddress,
+    paymentMethod: payload.paymentMethod,
     status: 'PENDING',
     orderStatus: 'PENDING',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }
+  })
 
-  // If using live Firestore
-  if (!shouldUseMockStore() && db) {
-    try {
-      const docRef = await addDoc(collection(db, 'orders'), {
-        ...orderRecord,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-
-      // Try updating inventory quantities in Firestore if items present
-      if (Array.isArray(data.items)) {
-        for (const item of data.items) {
-          if (item.inventoryId) {
-            try {
-              const invRef = doc(db, 'inventory', item.inventoryId)
-              const avail = Math.max(0, Number(item.availableQuantity || 0) - Number(item.quantity || 1))
-              const res = Number(item.reservedQuantity || 0) + Number(item.quantity || 1)
-              await updateDoc(invRef, {
-                availableQuantity: avail,
-                reservedQuantity: res,
-                updatedAt: serverTimestamp(),
-              })
-            } catch (invErr) {
-              console.warn('Inventory adjustment failed:', invErr?.message || invErr)
-            }
-          }
-        }
-      }
-
-      return { orderId: docRef.id, orderNumber }
-    } catch (err) {
-      console.warn('Firestore createTrustedOrder failed, falling back to mockStore:', err?.message || err)
-    }
-  }
-
-  // Fallback or mock store
   const order = createMockRecord('orders', orderRecord)
-  // Deduct in mock store if items exist
   if (Array.isArray(data.items)) {
     data.items.forEach(item => {
       if (item.inventoryId) {
         const current = getMockCollection('inventory')?.find(inv => inv.id === item.inventoryId)
         if (current) {
           updateMockRecord('inventory', item.inventoryId, {
-            availableQuantity: Math.max(0, Number(current.availableQuantity || 0) - Number(item.quantity || 1)),
             reservedQuantity: Number(current.reservedQuantity || 0) + Number(item.quantity || 1),
           })
         }
@@ -75,151 +82,83 @@ export const createTrustedOrder = async data => {
 }
 
 export const updateTrustedOrderStatus = async data => {
-  const { orderId, status } = data
-  if (!shouldUseMockStore() && db) {
+  const { orderId, status, rejectionReason, validationReason } = data
+  const nextStatus = normalizeOrderStatus(status)
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) {
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status,
-        orderStatus: status,
-        updatedAt: serverTimestamp(),
-      })
-      return { success: true }
+      const fn = call('updateOrderStatus')
+      const result = await fn({ orderId, status: nextStatus, rejectionReason, validationReason })
+      return result?.data || { success: true, status: nextStatus }
     } catch (err) {
-      console.warn('Firestore updateTrustedOrderStatus failed, using mock:', err?.message || err)
+      throw err
     }
   }
-  updateMockRecord('orders', orderId, { status, orderStatus: status })
-  return { success: true }
+  const target = toCanonicalOrder({ ...getMockCollection('orders')?.find(order => order.id === orderId), status: nextStatus, orderStatus: nextStatus, rejectionReason })
+  updateMockRecord('orders', orderId, target)
+  return { success: true, status: nextStatus }
 }
 
 export const createTrustedShipment = async data => {
-  const shipmentNumber = `DT-SHP-${String(Date.now()).slice(-6)}`
-  const shipmentRecord = {
-    ...data,
-    shipmentNumber,
-    status: 'DISPATCHED',
-    carrierName: data.carrierName || 'DrugTrack Logistics Fleet',
-    trackingNumber: data.trackingNumber || `DT-TRK-${String(Date.now()).slice(-6)}`,
-    currentLatitude: 19.0760,
-    currentLongitude: 72.8777,
-    estimatedDelivery: data.estimatedDelivery || 'In 2 Business Days',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-
-  if (!shouldUseMockStore() && db) {
-    try {
-      const shpRef = await addDoc(collection(db, 'shipments'), {
-        ...shipmentRecord,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-
-      // Link shipment to the order
-      if (data.orderId) {
-        await updateDoc(doc(db, 'orders', data.orderId), {
-          shipmentId: shpRef.id,
-          orderStatus: 'SHIPPED',
-          status: 'SHIPPED',
-          updatedAt: serverTimestamp(),
-        })
-      }
-
-      // Create initial tracking event
-      await addDoc(collection(db, 'trackingEvents'), {
-        shipmentId: shpRef.id,
-        status: 'DISPATCHED',
-        message: 'Package verified and dispatched from pharmaceutical warehouse.',
-        latitude: 19.0760,
-        longitude: 72.8777,
-        timestamp: serverTimestamp(),
-      })
-
-      return { shipmentId: shpRef.id, shipmentNumber }
-    } catch (err) {
-      console.warn('Firestore createTrustedShipment failed, falling back to mockStore:', err?.message || err)
-    }
-  }
-
-  const shipment = createMockRecord('shipments', shipmentRecord)
-  if (data.orderId) {
-    updateMockRecord('orders', data.orderId, {
-      shipmentId: shipment.id,
-      orderStatus: 'SHIPPED',
-      status: 'SHIPPED',
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) {
+    const result = await call('createOrderShipment')({
+      orderId: data.orderId,
+      carrierName: data.carrierName,
+      trackingNumber: data.trackingNumber,
+      estimatedDelivery: data.estimatedDelivery,
     })
+    return result.data
   }
-  createMockRecord('trackingEvents', {
-    shipmentId: shipment.id,
-    status: 'DISPATCHED',
-    message: 'Package verified and dispatched from pharmaceutical warehouse.',
-    latitude: 19.0760,
-    longitude: 72.8777,
-    timestamp: new Date().toISOString(),
+  const shipment = createMockRecord('shipments', {
+    ...data,
+    shipmentNumber: `DT-SHP-${String(Date.now()).slice(-6)}`,
+    status: 'ASSIGNED',
+    simulatedGps: true,
   })
-  return { shipmentId: shipment.id, shipmentNumber }
+  updateMockRecord('orders', data.orderId, { shipmentId: shipment.id, orderStatus: 'READY_FOR_DELIVERY', status: 'READY_FOR_DELIVERY' })
+  return { shipmentId: shipment.id, shipmentNumber: shipment.shipmentNumber }
+}
+
+export const assignTrustedShipment = async data => {
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('assignShipment')(data)).data
+  updateMockRecord('shipments', data.shipmentId, { assignedDeliveryStaffId: data.deliveryStaffId, status: 'ASSIGNED' })
+  return { ok: true }
+}
+
+export const updateTrustedShipmentStatus = async data => {
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('updateShipmentStatus')(data)).data
+  updateMockRecord('shipments', data.shipmentId, {
+    status: data.status,
+    currentLatitude: Number(data.latitude),
+    currentLongitude: Number(data.longitude),
+    estimatedDelivery: data.estimatedDelivery || null,
+  })
+  createMockRecord('trackingEvents', { shipmentId: data.shipmentId, status: data.status, message: data.message || '', timestamp: new Date().toISOString() })
+  return { ok: true, status: data.status }
+}
+
+export const confirmTrustedDelivery = async orderId => {
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('confirmDelivery')({ orderId })).data
+  updateMockRecord('orders', orderId, { orderStatus: 'RECIPIENT_CONFIRMED', status: 'RECIPIENT_CONFIRMED' })
+  return { ok: true }
+}
+
+export const createTrustedReview = async data => {
+  if (!shouldUseMockStore() && db && isFirebaseConfigured) return (await call('createReview')(data)).data
+  updateMockRecord('orders', data.orderId, { orderStatus: 'COMPLETED', status: 'COMPLETED' })
+  createMockRecord('reviews', { ...data, userId: data.userId || 'demo-customer' })
+  return { ok: true }
 }
 
 export const updateTrustedTracking = async data => {
   const updateData = {
     status: data.status,
-    currentLatitude: Number(data.latitude || data.currentLatitude || 19.0760),
-    currentLongitude: Number(data.longitude || data.currentLongitude || 72.8777),
-    estimatedDelivery: data.estimatedDelivery || 'In Transit',
+    latitude: Number(data.latitude || data.currentLatitude),
+    longitude: Number(data.longitude || data.currentLongitude),
+    estimatedDelivery: data.estimatedDelivery || null,
+    message: data.message || '',
   }
 
-  if (!shouldUseMockStore() && db) {
-    try {
-      await updateDoc(doc(db, 'shipments', data.shipmentId), {
-        ...updateData,
-        updatedAt: serverTimestamp(),
-      })
-
-      await addDoc(collection(db, 'trackingEvents'), {
-        shipmentId: data.shipmentId,
-        status: data.status,
-        message: data.message || `Package checkpoint: ${data.status.replaceAll('_', ' ')}`,
-        latitude: updateData.currentLatitude,
-        longitude: updateData.currentLongitude,
-        timestamp: serverTimestamp(),
-      })
-
-      if (data.status === 'DELIVERED') {
-        const q = query(collection(db, 'orders'), where('shipmentId', '==', data.shipmentId))
-        const snaps = await getDocs(q)
-        snaps.forEach(async d => {
-          await updateDoc(doc(db, 'orders', d.id), {
-            status: 'DELIVERED',
-            orderStatus: 'DELIVERED',
-            updatedAt: serverTimestamp(),
-          })
-        })
-      }
-
-      return { success: true }
-    } catch (err) {
-      console.warn('Firestore updateTrustedTracking error, using mockStore:', err?.message || err)
-    }
-  }
-
-  updateMockRecord('shipments', data.shipmentId, updateData)
-  createMockRecord('trackingEvents', {
-    shipmentId: data.shipmentId,
-    status: data.status,
-    message: data.message || `Status updated to ${data.status.replaceAll('_', ' ')}`,
-    latitude: updateData.currentLatitude,
-    longitude: updateData.currentLongitude,
-    timestamp: new Date().toISOString(),
-  })
-
-  if (data.status === 'DELIVERED') {
-    const orders = getMockCollection('orders') || []
-    orders.filter(o => o.shipmentId === data.shipmentId).forEach(o => {
-      updateMockRecord('orders', o.id, { status: 'DELIVERED', orderStatus: 'DELIVERED' })
-    })
-  }
-
-  return { success: true }
+  return updateTrustedShipmentStatus({ shipmentId: data.shipmentId, ...updateData })
 }
 
 export const verifyBatch = async token => {

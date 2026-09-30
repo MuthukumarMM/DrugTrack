@@ -18,7 +18,7 @@ function Badge({ children }) {
 }
 
 export default function RoleLayout({ role, links = [] }) {
-  const { currentUser, profile } = useAuth()
+  const { currentUser, profile, clearSession } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [cart, setCart] = useState(null)
@@ -40,6 +40,7 @@ export default function RoleLayout({ role, links = [] }) {
   const logout = async () => {
     try {
       await signOutUser()
+      clearSession()
       navigate('/login', { replace: true })
     } catch (error) {
       toast.error(error.message || 'Unable to sign out.')
@@ -134,4 +135,57 @@ export default function RoleLayout({ role, links = [] }) {
     </div>
   )
 }
-
+export const roleLinks = {
+  ADMIN: [
+    { label: 'Overview', to: '/admin' },
+    { label: 'Users & approvals', to: '/admin/users' },
+    { label: 'Categories', to: '/admin/categories' },
+    { label: 'Drugs', to: '/admin/drugs' },
+    { label: 'Batches', to: '/admin/batches' },
+    { label: 'Inventory', to: '/admin/inventory' },
+    { label: 'Orders', to: '/admin/orders' },
+    { label: 'Profile', to: '/admin/profile' },
+  ],
+  MANUFACTURER: [
+    { label: 'Dashboard', to: '/manufacturer' },
+    { label: 'My drugs', to: '/manufacturer/my-drugs' },
+    { label: 'Batches', to: '/manufacturer/batches' },
+    { label: 'Inventory', to: '/manufacturer/inventory' },
+    { label: 'Orders', to: '/manufacturer/orders' },
+    { label: 'Profile', to: '/manufacturer/profile' },
+  ],
+  WAREHOUSE_MANAGER: [
+    { label: 'Dashboard', to: '/warehouse' },
+    { label: 'Inventory', to: '/warehouse/inventory' },
+    { label: 'Profile', to: '/warehouse/profile' },
+  ],
+  DISTRIBUTOR: [
+    { label: 'Dashboard', to: '/distributor' },
+    { label: 'Inventory', to: '/distributor/inventory' },
+    { label: 'Orders', to: '/distributor/orders' },
+    { label: 'Profile', to: '/distributor/profile' },
+  ],
+  PHARMACY: [
+    { label: 'Dashboard', to: '/pharmacy' },
+    { label: 'Inventory', to: '/pharmacy/my-inventory' },
+    { label: 'Orders', to: '/pharmacy/orders' },
+    { label: 'Profile', to: '/pharmacy/profile' },
+  ],
+  HOSPITAL: [
+    { label: 'Dashboard', to: '/hospital' },
+    { label: 'Inventory', to: '/hospital/inventory' },
+    { label: 'Orders', to: '/hospital/orders' },
+    { label: 'Profile', to: '/hospital/profile' },
+  ],
+  DELIVERY_STAFF: [{ label: 'Dashboard', to: '/delivery' }, { label: 'Profile', to: '/delivery/profile' }],
+  CUSTOMER: [
+    { label: 'Home', to: '/shop' },
+    { label: 'Medicines', to: '/medicines' },
+    { label: 'Cart', to: '/cart' },
+    { label: 'Orders', to: '/orders' },
+    { label: 'History', to: '/history' },
+    { label: 'Addresses', to: '/addresses' },
+    { label: 'Notifications', to: '/notifications' },
+    { label: 'Profile', to: '/profile' },
+  ],
+}

@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev:emulator": "vite --mode emulator --host 0.0.0.0 --port 3000",
     "build": "vite build",
     "lint": "oxlint",
+    "seed:emulator": "firebase emulators:exec --only auth,firestore \"node functions/emulator-seed.js\"",
+    "seed:emulator:running": "node functions/emulator-seed.js",
+    "test:emulator:workflow": "firebase emulators:exec --only auth,firestore,functions \"node functions/emulator-workflow-test.js\"",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,26 +1,11 @@
-import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, where, orderBy } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore'
 import { db } from '../firebase/config'
-import { updateTrustedTracking } from './functionsService'
-import { createMockRecord, getMockCollection, subscribeStore } from '../data/mockStore'
+import { createTrustedShipment, updateTrustedShipmentStatus } from './functionsService'
+import { getMockCollection, subscribeStore } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
 
 export const createShipment = async data => {
-  const shipmentNumber = `DT-SHP-${String(Date.now()).slice(-6)}`
-  if (shouldUseMockStore() || !db) {
-    return Promise.resolve(createMockRecord('shipments', { ...data, shipmentNumber, status: 'CREATED' }))
-  }
-  try {
-    return await addDoc(collection(db, 'shipments'), {
-      ...data,
-      shipmentNumber,
-      status: 'CREATED',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  } catch (error) {
-    console.warn('Firestore createShipment error:', error?.message || error)
-    return createMockRecord('shipments', { ...data, shipmentNumber, status: 'CREATED' })
-  }
+  return createTrustedShipment(data)
 }
 
 export const subscribeShipment = (id, cb) => {
@@ -99,11 +84,11 @@ export const subscribeTrackingEvents = (id, cb) => {
 }
 
 export const updateTracking = (id, data) =>
-  updateTrustedTracking({
+  updateTrustedShipmentStatus({
     shipmentId: id,
     status: data.status,
-    latitude: Number(data.currentLatitude),
-    longitude: Number(data.currentLongitude),
+    latitude: Number(data.currentLatitude || data.latitude),
+    longitude: Number(data.currentLongitude || data.longitude),
     message: data.message || '',
     estimatedDelivery: data.estimatedDelivery || null,
   })

@@ -2,30 +2,37 @@ import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, where } fr
 import { db } from '../firebase/config'
 import { getMockCollection, getMockRecord, subscribeStore } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
+import { normalizeOrderStatus } from '../constants/statuses'
 
-const mapDocs = snapshot => snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+const mapDocs = snapshot => snapshot.docs.map(item => {
+  const record = { id: item.id, ...item.data() }
+  const normalizedStatus = normalizeOrderStatus(record.orderStatus || record.status)
+  return { ...record, orderStatus: normalizedStatus, status: normalizedStatus }
+})
 
-export const subscribeOrders = (userId, callback, seller = false) => {
+export const subscribeOrders = (userId, callback, seller = false, field) => {
+  const ownerField = field || (seller ? 'sellerId' : 'customerId')
   if (shouldUseMockStore() || !db) {
     return subscribeStore(store => {
-      const orders = (store.orders || []).filter(o => (seller ? o.sellerId === userId : o.customerId === userId))
+      const orders = (store.orders || []).filter(o => o[ownerField] === userId).map(order => {
+        const normalizedStatus = normalizeOrderStatus(order.orderStatus || order.status)
+        return { ...order, orderStatus: normalizedStatus, status: normalizedStatus }
+      })
       callback(orders)
     })
   }
   try {
     return onSnapshot(
-      query(collection(db, 'orders'), where(seller ? 'sellerId' : 'customerId', '==', userId), orderBy('createdAt', 'desc'), limit(50)),
+      query(collection(db, 'orders'), where(ownerField, '==', userId), orderBy('createdAt', 'desc'), limit(50)),
       snapshot => callback(mapDocs(snapshot)),
       error => {
         console.warn(`Firestore subscribeOrders error for ${userId}:`, error?.message || error)
-        const orders = (getMockCollection('orders') || []).filter(o => (seller ? o.sellerId === userId : o.customerId === userId))
-        callback(orders)
+        callback([])
       },
     )
   } catch (error) {
     console.warn('Firestore subscribeOrders sync error:', error?.message || error)
-    const orders = (getMockCollection('orders') || []).filter(o => (seller ? o.sellerId === userId : o.customerId === userId))
-    callback(orders)
+    callback([])
     return () => {}
   }
 }
@@ -33,7 +40,10 @@ export const subscribeOrders = (userId, callback, seller = false) => {
 export const subscribeAllOrders = callback => {
   if (shouldUseMockStore() || !db) {
     return subscribeStore(store => {
-      callback(store.orders || [])
+      callback((store.orders || []).map(order => {
+        const normalizedStatus = normalizeOrderStatus(order.orderStatus || order.status)
+        return { ...order, orderStatus: normalizedStatus, status: normalizedStatus }
+      }))
     })
   }
   try {
@@ -42,12 +52,12 @@ export const subscribeAllOrders = callback => {
       snapshot => callback(mapDocs(snapshot)),
       error => {
         console.warn('Firestore subscribeAllOrders error:', error?.message || error)
-        callback(getMockCollection('orders') || [])
+        callback([])
       },
     )
   } catch (error) {
     console.warn('Firestore subscribeAllOrders sync error:', error?.message || error)
-    callback(getMockCollection('orders') || [])
+    callback([])
     return () => {}
   }
 }
@@ -56,36 +66,42 @@ export const subscribeOrder = (id, callback) => {
   if (shouldUseMockStore() || !db) {
     return subscribeStore(store => {
       const order = (store.orders || []).find(o => o.id === id || o.orderNumber === id) || null
-      callback(order)
+      if (!order) {
+        callback(null)
+        return
+      }
+      const normalizedStatus = normalizeOrderStatus(order.orderStatus || order.status)
+      callback({ ...order, orderStatus: normalizedStatus, status: normalizedStatus })
     })
   }
   try {
     return onSnapshot(
       doc(db, 'orders', id),
-      snapshot => callback(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null),
+      snapshot => callback(snapshot.exists() ? mapDocs({ docs: [snapshot] })[0] : null),
       error => {
         console.warn(`Firestore subscribeOrder error for ${id}:`, error?.message || error)
-        const order = (getMockCollection('orders') || []).find(o => o.id === id || o.orderNumber === id) || null
-        callback(order)
+        callback(null)
       },
     )
   } catch (error) {
     console.warn(`Firestore subscribeOrder sync error for ${id}:`, error?.message || error)
-    const order = (getMockCollection('orders') || []).find(o => o.id === id || o.orderNumber === id) || null
-    callback(order)
+    callback(null)
     return () => {}
   }
 }
 
 export const getOrder = async id => {
   if (shouldUseMockStore() || !db) {
-    return getMockRecord('orders', id) || (getMockCollection('orders') || []).find(o => o.orderNumber === id) || null
+    const order = getMockRecord('orders', id) || (getMockCollection('orders') || []).find(o => o.orderNumber === id) || null
+    if (!order) return null
+    const normalizedStatus = normalizeOrderStatus(order.orderStatus || order.status)
+    return { ...order, orderStatus: normalizedStatus, status: normalizedStatus }
   }
   try {
     const snapshot = await getDocs(query(collection(db, 'orders'), where('__name__', '==', id)))
     return snapshot.docs[0] ? { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } : null
   } catch (error) {
     console.warn(`Firestore getOrder error for ${id}:`, error?.message || error)
-    return getMockRecord('orders', id) || (getMockCollection('orders') || []).find(o => o.orderNumber === id) || null
+    return null
   }
 }

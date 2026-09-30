@@ -25,9 +25,7 @@ const loginRoles = [
 
 const blockedStatuses = new Set(['SUSPENDED', 'REJECTED'])
 const approvedStatuses = new Set(['ACTIVE', 'APPROVED'])
-const demoMode = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
-
-function destinationFor(profile) {
+function destinationFor(profile, demoMode) {
   if (!profile) return '/account-status'
   if (blockedStatuses.has(profile.status)) return '/account-status'
   if (demoMode) return ROLE_DASHBOARDS[profile.role] || '/'
@@ -42,7 +40,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ role: '', email: '', password: '' })
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
-  const { isConfigured, refreshProfile } = useAuth()
+  const { isConfigured, isDemoMode, setAuthenticatedUser } = useAuth()
 
   const update = event => setForm({ ...form, [event.target.name]: event.target.value })
 
@@ -75,9 +73,9 @@ export default function LoginPage() {
         })
       }
 
-      await refreshProfile(credential.user)
+      await setAuthenticatedUser(credential.user)
       toast.success('Signed in')
-      navigate(destinationFor(profile), { replace: true })
+      navigate(destinationFor(profile, isDemoMode), { replace: true })
     } catch (error) {
       toast.error(error.message || 'Unable to sign in.')
     } finally {
@@ -102,13 +100,10 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </div>
-        <Button disabled={busy || (!isConfigured && !demoMode)} className="w-full">
+        <Button disabled={busy || (!isConfigured && !isDemoMode)} className="w-full">
           {busy ? 'Signing in...' : 'Sign in'}
         </Button>
-        {!isConfigured && !demoMode && <p className="text-xs text-amber-700">Add Firebase values to `.env` before signing in.</p>}
-        {demoMode && !isConfigured && (
-          <p className="text-xs text-teal-700 font-medium">Demo Mode Active: Click any quick demo account below to instantly explore roles.</p>
-        )}
+        {!isConfigured && !isDemoMode && <p className="text-xs text-amber-700">Add Firebase values to `.env` before signing in.</p>}
       </form>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Quick demo accounts</p>

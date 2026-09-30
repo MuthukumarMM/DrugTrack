@@ -32,6 +32,7 @@ import CategoryPage from '../pages/management/CategoryPage'
 import ProfilePage from '../pages/profile/ProfilePage'
 import DeliveryDashboard from '../pages/operations/DeliveryDashboard'
 import OrderQueuePage from '../pages/operations/OrderQueuePage'
+import DistributorOrderQueue from '../pages/operations/DistributorOrderQueue'
 import RoleDashboard from '../pages/operations/RoleDashboard'
 
 export default function RoutesFixed() {
@@ -52,23 +53,12 @@ export default function RoutesFixed() {
     <Route path="/account-status" element={<AccountStatusPage/>}/>
     <Route element={<ProtectedRoute />}>
       <Route element={<RoleRoute roles={[ROLES.CUSTOMER]} />}>
-        <Route element={<CustomerLayout />}>
-          <Route path="/shop" element={<CataloguePage />} />
-          <Route path="/shop/drug/:listingId" element={<MedicineDetailsPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-          <Route path="/history" element={<OrdersPage history />} />
-          <Route path="/addresses" element={<AddressesPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/track/:shipmentId" element={<TrackingMap />} />
-        </Route>
+        <Route path="/shop/*" element={<CustomerLayout />}><Route index element={<CataloguePage />} /><Route path="drug/:listingId" element={<MedicineDetailsPage />} /></Route>
+        <Route path="/cart" element={<CartPage />} /><Route path="/checkout" element={<CheckoutPage />} /><Route path="/orders" element={<OrdersPage/>}/><Route path="/orders/:orderId" element={<OrderDetailPage/>}/><Route path="/history" element={<OrdersPage history />}/><Route path="/addresses" element={<AddressesPage/>}/><Route path="/notifications" element={<NotificationsPage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/track/:shipmentId" element={<TrackingMap />} />
       </Route>
       <Route element={<RoleRoute roles={[ROLES.MANUFACTURER]} />}><Route path="/manufacturer/*" element={<ManufacturerLayout />}><Route index element={<RoleDashboard role="MANUFACTURER" />} /><Route path="orders" element={<OrderQueuePage />} /><Route path="my-drugs" element={<DrugManager />} /><Route path="batches" element={<BatchPage />} /><Route path="inventory" element={<InventoryPage />} /><Route path="profile" element={<ProfilePage/>}/></Route></Route>
       <Route element={<RoleRoute roles={[ROLES.WAREHOUSE_MANAGER]} />}><Route path="/warehouse/*" element={<WarehouseLayout />}><Route index element={<RoleDashboard role="WAREHOUSE_MANAGER"/>}/><Route path="inventory" element={<InventoryPage/>}/><Route path="profile" element={<ProfilePage/>}/></Route></Route>
-      <Route element={<RoleRoute roles={[ROLES.DISTRIBUTOR]} />}><Route path="/distributor/*" element={<DistributorLayout />}><Route index element={<RoleDashboard role="DISTRIBUTOR" />} /><Route path="orders" element={<OrderQueuePage />} /><Route path="inventory" element={<InventoryPage />} /><Route path="profile" element={<ProfilePage/>}/></Route></Route>
+      <Route element={<RoleRoute roles={[ROLES.DISTRIBUTOR]} />}><Route path="/distributor/*" element={<DistributorLayout />}><Route index element={<RoleDashboard role="DISTRIBUTOR" />} /><Route path="orders" element={<DistributorOrderQueue />} /><Route path="inventory" element={<InventoryPage />} /><Route path="profile" element={<ProfilePage/>}/></Route></Route>
       <Route element={<RoleRoute roles={[ROLES.PHARMACY]} />}><Route path="/pharmacy/*" element={<PharmacyLayout />}><Route index element={<RoleDashboard role="PHARMACY" />} /><Route path="orders" element={<OrderQueuePage />} /><Route path="my-inventory" element={<InventoryPage />} /><Route path="profile" element={<ProfilePage/>}/></Route></Route>
       <Route element={<RoleRoute roles={[ROLES.HOSPITAL]} />}><Route path="/hospital/*" element={<HospitalLayout />}><Route index element={<RoleDashboard role="HOSPITAL" />} /><Route path="orders" element={<OrderQueuePage />} /><Route path="inventory" element={<InventoryPage />} /><Route path="profile" element={<ProfilePage/>}/></Route></Route>
       <Route element={<RoleRoute roles={[ROLES.DELIVERY_STAFF]} />}><Route path="/delivery/*" element={<DeliveryLayout/>}><Route index element={<DeliveryDashboard/>}/><Route path="profile" element={<ProfilePage/>}/></Route></Route>

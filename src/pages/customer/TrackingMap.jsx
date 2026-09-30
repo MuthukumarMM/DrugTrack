@@ -107,7 +107,7 @@ export default function TrackingMap() {
             <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                 <Navigation size={14} className="text-teal-600" />
-                Live GPS Transit Map
+                {shipment.simulatedGps ? 'Simulated GPS / Demo Tracking' : 'Live GPS Transit Map'}
               </span>
               <span className="text-xs text-slate-500">
                 OpenStreetMap Realtime Telemetry
@@ -131,7 +131,7 @@ export default function TrackingMap() {
                       <div className="text-xs">
                         <p className="font-bold text-slate-900">{shipment.shipmentNumber}</p>
                         <p className="text-slate-600 mt-1">Status: {shipment.status}</p>
-                        <p className="text-teal-700 mt-0.5 font-semibold">Live Courier Position</p>
+                        <p className="text-teal-700 mt-0.5 font-semibold">{shipment.simulatedGps ? 'Simulated courier position' : 'Live courier position'}</p>
                       </div>
                     </Popup>
                   </Marker>
@@ -154,8 +154,8 @@ export default function TrackingMap() {
             <ShieldCheck size={18} className="shrink-0 text-teal-600 mt-0.5" />
             <div>
               <p className="font-semibold text-slate-800">Cold Chain & Integrity Assured</p>
-              <p className="mt-0.5 text-slate-500 leading-relaxed">
-                All DrugTrack medical dispatches are logged to immutable Firestore shipment logs. Drivers verify deliveries with one-time handoff credentials.
+                <p className="mt-0.5 text-slate-500 leading-relaxed">
+                {shipment.simulatedGps ? 'SIMULATED GPS / DEMO TRACKING. Location updates are stored in Firestore for workflow testing.' : 'All DrugTrack medical dispatches are logged to Firestore shipment logs. Drivers verify deliveries with one-time handoff credentials.'}
               </p>
             </div>
           </div>

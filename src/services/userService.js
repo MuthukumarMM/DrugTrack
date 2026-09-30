@@ -1,9 +1,9 @@
 import { getDocument, serverTimestamp, setDocument, updateDocument } from '../firebase/firestore'
 import { ACCOUNT_STATUS } from '../constants/statuses'
 import { getDemoAccountByUid, getDemoProfileFromAccount } from '../data/demoAccounts'
+import { isDemoMode } from '../firebase/mode'
 
 const organizationCollections = { MANUFACTURER:'manufacturers', WAREHOUSE_MANAGER:'warehouses', DISTRIBUTOR:'distributors', PHARMACY:'pharmacies', HOSPITAL:'hospitals', DELIVERY_STAFF:'deliveryStaff', CUSTOMER:'customers' }
-const isDemoMode = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase() === 'true'
 
 export const getUserProfile = async uid => {
   if (isDemoMode) {
