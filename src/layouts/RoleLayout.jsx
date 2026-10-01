@@ -50,7 +50,7 @@ export default function RoleLayout({ role, links = [] }) {
   }
 
   const nav = (
-    <nav className="mt-8 space-y-2">
+    <nav className="app-nav space-y-1.5">
       {links.map(link => (
         <NavLink
           onClick={() => setOpen(false)}
@@ -58,11 +58,7 @@ export default function RoleLayout({ role, links = [] }) {
           to={link.to}
           end={link.to.split('/').length === 2}
           className={({ isActive }) =>
-            `flex items-center rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
-              isActive
-                ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-[0_16px_30px_rgba(13,148,136,0.22)]'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-brand-700'
-            }`
+            `app-nav-link ${isActive ? 'is-active' : ''}`
           }
         >
           {link.label}
@@ -72,9 +68,9 @@ export default function RoleLayout({ role, links = [] }) {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <aside className="fixed inset-y-0 z-30 hidden w-72 border-r border-slate-200 bg-white/90 p-5 backdrop-blur xl:block">
-        <div className="rounded-[1.5rem] bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-white shadow-[0_18px_30px_rgba(15,118,110,0.24)]">
+    <div className="min-h-screen bg-transparent">
+      <aside className="app-sidebar fixed inset-y-0 z-30 hidden w-72 border-r p-5 xl:block">
+        <div className="brand-lockup rounded-[1.5rem] p-4 text-white">
           <Link to="/" className="flex items-center gap-2 text-xl font-bold">
             <PackageCheck />
             DrugTrack
@@ -100,31 +96,31 @@ export default function RoleLayout({ role, links = [] }) {
       )}
 
       <main className="xl:ml-72">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
+        <header className="app-topbar sticky top-0 z-20 flex items-center justify-between gap-4 border-b px-5 py-4">
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="xl:hidden" aria-label="Open menu">
               <Menu />
             </button>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">{role.replaceAll('_', ' ')}</p>
-              <p className="text-xs text-slate-500">{profile?.displayName || profile?.email}</p>
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-700">{role.replaceAll('_', ' ')}</p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-700">{profile?.displayName || profile?.email}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {isBuyer && (
-              <Link className="relative rounded-xl border border-slate-200 p-2 text-slate-600 hover:text-brand-700" to={`${buyerBasePath}/cart`} aria-label="Cart">
+              <Link className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 shadow-sm hover:-translate-y-0.5 hover:border-teal-300 hover:text-brand-700" to={`${buyerBasePath}/cart`} aria-label="Cart">
                 <ShoppingCart size={18} />
                 <Badge>{cartCount}</Badge>
               </Link>
             )}
             {role === ROLES.CUSTOMER && (
-              <Link className="relative rounded-xl border border-slate-200 p-2 text-slate-600 hover:text-brand-700" to="/notifications" aria-label="Notifications">
+              <Link className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 shadow-sm hover:-translate-y-0.5 hover:border-teal-300 hover:text-brand-700" to="/notifications" aria-label="Notifications">
                 <Bell size={18} />
                 <Badge>{unreadCount}</Badge>
               </Link>
             )}
-            <button onClick={logout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-red-200 hover:text-red-600">
+            <button onClick={logout} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-600 shadow-sm hover:border-red-200 hover:text-red-600">
               <LogOut size={17} />
               Logout
             </button>
@@ -191,7 +187,7 @@ export const roleLinks = {
     { label: 'Hospital Orders', to: '/hospital/orders' },
     { label: 'Profile', to: '/hospital/profile' },
   ],
-  DELIVERY_STAFF: [{ label: 'Dashboard', to: '/delivery' }, { label: 'Profile', to: '/delivery/profile' }],
+  DELIVERY_STAFF: [{ label: 'Dashboard', to: '/delivery' }, { label: 'Delivery History', to: '/delivery/history' }, { label: 'Profile', to: '/delivery/profile' }],
   CUSTOMER: [
     { label: 'Home', to: '/shop' },
     { label: 'Medicines', to: '/medicines' },

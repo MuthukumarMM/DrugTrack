@@ -9,6 +9,7 @@ import { ROLES } from '../../constants/roles'
 import { useAuth } from '../../context/AuthContext'
 import { updateTrustedOrderStatus } from '../../services/functionsService'
 import { subscribeAllOrders, subscribeOrders } from '../../services/orderService'
+import HistoryStats from '../../components/common/HistoryStats'
 
 const nextAction = {
   PENDING: 'UNDER_REVIEW',
@@ -38,6 +39,7 @@ export default function OrderQueuePage({ admin = false, history = false }) {
   useEffect(() => {
     if (admin || role === ROLES.ADMIN) return subscribeAllOrders(setOrders)
     if (role === ROLES.MANUFACTURER) return subscribeOrders(currentUser.uid, setOrders, true, 'manufacturerId')
+    if (role === ROLES.DISTRIBUTOR) return subscribeOrders(currentUser.uid, setOrders, true, 'distributorId')
     return subscribeOrders(currentUser.uid, setOrders, true)
   }, [admin, currentUser, role])
 
@@ -110,6 +112,7 @@ export default function OrderQueuePage({ admin = false, history = false }) {
         title={history ? `${admin ? 'All' : role.replaceAll('_', ' ')} order history` : admin ? 'All orders' : role === ROLES.MANUFACTURER ? 'Manufacturer order queue' : `Incoming ${role.replaceAll('_', ' ').toLowerCase()} orders`}
         description={history ? 'Complete operational ledger across every buyer, status transition, and fulfillment handoff.' : admin ? 'System-wide order oversight across every buyer type.' : 'Process incoming orders for this facility. Your own purchases and history are available in their dedicated views.'}
       />
+      {history && <HistoryStats orders={orders} title="Operational history summary" />}
 
       <div className="mb-4 flex flex-wrap gap-3">
         {(admin || role === ROLES.MANUFACTURER) && (
@@ -166,6 +169,13 @@ export default function OrderQueuePage({ admin = false, history = false }) {
                     <td className="p-3 font-semibold">{currency(order.totalAmount)}</td>
                     <td className="p-3">
                       <StatusBadge status={order.orderStatus} />
+                      {history && order.orderHistory?.length > 0 && (
+                        <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                          {[...order.orderHistory].slice(-3).reverse().map((event, index) => (
+                            <p key={`${event.status}-${index}`}><span className="font-semibold text-teal-700">{event.status.replaceAll('_', ' ')}</span>{event.actorRole ? ` · ${event.actorRole.replaceAll('_', ' ')}` : ''}</p>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="flex flex-wrap gap-2 p-3">
                       {action && (

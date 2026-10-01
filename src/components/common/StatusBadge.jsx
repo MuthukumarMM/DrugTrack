@@ -11,5 +11,5 @@ const palette = {
 export default function StatusBadge({ status }) {
   const value = String(status || 'PENDING').replaceAll('_', ' ')
   const tone = palette[String(status || 'PENDING')] || 'bg-teal-50 text-teal-700'
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{value}</span>
+  return <span className={`status-pill ${tone}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{value}</span>
 }

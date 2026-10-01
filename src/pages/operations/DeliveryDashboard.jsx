@@ -9,6 +9,7 @@ import LoadingSpinner from '../../components/feedback/LoadingSpinner'
 import PageHeader from '../../components/common/PageHeader'
 import EmptyState from '../../components/feedback/EmptyState'
 import StatusBadge from '../../components/common/StatusBadge'
+import HistoryStats from '../../components/common/HistoryStats'
 
 const nextStatus = {
   ASSIGNED: 'ACCEPTED',
@@ -18,7 +19,7 @@ const nextStatus = {
   OUT_FOR_DELIVERY: 'DELIVERED',
 }
 
-export default function DeliveryDashboard() {
+export default function DeliveryDashboard({ history = false }) {
   const { currentUser } = useAuth()
   const [shipments, setShipments] = useState(null)
   const [reviews, setReviews] = useState([])
@@ -28,6 +29,7 @@ export default function DeliveryDashboard() {
   useEffect(() => subscribeShipmentReviews((shipments || []).map(shipment => shipment.id), setReviews), [shipments])
 
   const reviewsByShipment = useMemo(() => new Map(reviews.map(review => [review.shipmentId, review])), [reviews])
+  const visibleShipments = history ? shipments.filter(shipment => shipment.status === 'DELIVERED') : shipments
 
   if (!shipments) return <LoadingSpinner />
 
@@ -49,12 +51,13 @@ export default function DeliveryDashboard() {
 
   return (
     <>
-      <PageHeader title="Assigned deliveries" description="Move each medicine shipment through the live route and review buyer feedback after delivery." />
-      {!shipments.length ? (
-        <EmptyState title="No assigned deliveries" description="Assigned shipments will appear here in real time." />
+      <PageHeader title={history ? 'Delivery history' : 'Assigned deliveries'} description={history ? 'Completed handoffs and delivery records assigned to you.' : 'Move each medicine shipment through the live route and review buyer feedback after delivery.'} />
+      {history && <HistoryStats deliveries={shipments} title="Delivery history summary" />}
+      {!visibleShipments.length ? (
+        <EmptyState title={history ? 'No completed deliveries' : 'No assigned deliveries'} description={history ? 'Completed deliveries will appear here after handoff.' : 'Assigned shipments will appear here in real time.'} />
       ) : (
         <div className="grid gap-4">
-          {shipments.map(shipment => {
+          {visibleShipments.map(shipment => {
             const review = reviewsByShipment.get(shipment.id)
             const next = nextStatus[shipment.status]
             const values = form[shipment.id] || {}
@@ -80,7 +83,7 @@ export default function DeliveryDashboard() {
                   </div>
                 )}
 
-                {next && <>
+                {!history && next && <>
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <input aria-label="Live latitude" className="field" type="number" step="any" placeholder="Live latitude" value={values.latitude || ''} onChange={event => setForm({ ...form, [shipment.id]: { ...values, latitude: event.target.value } })} />
                     <input aria-label="Live longitude" className="field" type="number" step="any" placeholder="Live longitude" value={values.longitude || ''} onChange={event => setForm({ ...form, [shipment.id]: { ...values, longitude: event.target.value } })} />

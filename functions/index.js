@@ -20,6 +20,33 @@ export const syncCatalogue = onDocumentWritten('inventory/{inventoryId}', async 
   return listingRef.set({inventoryId:event.params.inventoryId,drugId:inventory.drugId,batchId:inventory.batchId,name:drug.name,genericName:drug.genericName||'',brandName:drug.brandName||'',categoryId:drug.categoryId||'',dosageForm:drug.dosageForm||'',strength:drug.strength||'',imageUrl:drug.imageUrl||'',prescriptionRequired:!!drug.prescriptionRequired,price:Number(inventory.sellingPrice||drug.basePrice||0),availableQuantity:available,status:available?'IN_STOCK':'OUT_OF_STOCK',updatedAt:FieldValue.serverTimestamp()})
 })
 
+const historyActor = status => {
+  if (['UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR'].includes(status)) return 'MANUFACTURER'
+  if (['DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_ACCEPTED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY'].includes(status)) return 'DISTRIBUTOR'
+  if (['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(status)) return 'DELIVERY_STAFF'
+  if (['RECIPIENT_CONFIRMED', 'COMPLETED'].includes(status)) return 'RECIPIENT'
+  return 'SYSTEM'
+}
+
+export const recordOrderStatusHistory = onDocumentWritten('orders/{orderId}', async event => {
+  if (!event.data?.before.exists || !event.data.after.exists) return null
+  const before = event.data.before.data()
+  const after = event.data.after.data()
+  const status = after.orderStatus || after.status
+  if (!status || status === (before.orderStatus || before.status)) return null
+  const history = after.orderHistory || []
+  if (history.at(-1)?.status === status) return null
+  return event.data.after.ref.update({
+    orderHistory: [...history, {
+      status,
+      at: new Date().toISOString(),
+      actorId: after.updatedBy || '',
+      actorRole: historyActor(status),
+      message: `Order moved to ${status.replaceAll('_', ' ').toLowerCase()}.`,
+    }],
+  })
+})
+
 export const sendContactMessageEmail = onDocumentCreated('contactMessages/{messageId}', async event => {
   const message = event.data?.data()
   if (!message) return

@@ -12,6 +12,7 @@ import { removeAddress, saveAddress, subscribeAddresses } from '../../services/a
 import { subscribeOrder, subscribeOrders } from '../../services/orderService'
 import { subscribeShipment } from '../../services/shipmentService'
 import { confirmTrustedDelivery, createTrustedReview } from '../../services/functionsService'
+import HistoryStats from '../../components/common/HistoryStats'
 
 const blankAddress = {
   fullName: '',
@@ -177,6 +178,7 @@ export function OrdersPage({ history = false }) {
         title={history ? 'Complete purchase history' : 'My orders'}
         description={history ? 'A complete ledger of every order, approval, delivery, cancellation, and review.' : 'Realtime status updates for trusted DrugTrack orders.'}
       />
+      {history && <HistoryStats orders={rows} title="Purchase history summary" />}
       {history && (
         <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_220px]">
           <input aria-label="Search order number or medicine" className="field bg-white" placeholder="Search order number or medicine" value={search} onChange={event => setSearch(event.target.value)} />

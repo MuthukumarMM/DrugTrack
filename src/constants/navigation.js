@@ -15,6 +15,7 @@ export const roleLinks = {
     { label: 'Batches & QR', to: '/manufacturer/batches' },
     { label: 'Factory Inventory', to: '/manufacturer/inventory' },
     { label: 'Incoming Orders', to: '/manufacturer/orders' },
+    { label: 'Order History', to: '/manufacturer/history' },
     { label: 'Profile', to: '/manufacturer/profile' },
   ],
   WAREHOUSE_MANAGER: [
@@ -26,6 +27,7 @@ export const roleLinks = {
     { label: 'Dashboard', to: '/distributor' },
     { label: 'Distribution Stock', to: '/distributor/inventory' },
     { label: 'Orders & Dispatch', to: '/distributor/orders' },
+    { label: 'Order History', to: '/distributor/history' },
     { label: 'Profile', to: '/distributor/profile' },
   ],
   PHARMACY: [
@@ -48,6 +50,7 @@ export const roleLinks = {
   ],
   DELIVERY_STAFF: [
     { label: 'Deliveries', to: '/delivery' },
+    { label: 'Delivery History', to: '/delivery/history' },
     { label: 'Profile', to: '/delivery/profile' },
   ],
   CUSTOMER: [

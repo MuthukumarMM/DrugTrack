@@ -1,1 +1,9 @@
-export default function PageHeader({title,description}){return <header className="mb-7"><p className="text-sm font-semibold text-brand-600">DRUGTRACK</p><h1 className="mt-1 text-2xl font-bold">{title}</h1>{description&&<p className="mt-1 text-slate-500">{description}</p>}</header>}
+export default function PageHeader({ title, description }) {
+	return (
+		<header className="page-header">
+			<p className="page-header-kicker">DrugTrack workspace</p>
+			<h1 className="page-header-title">{title}</h1>
+			{description && <p className="page-header-description">{description}</p>}
+		</header>
+	)
+}

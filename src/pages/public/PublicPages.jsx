@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { submitContactMessage } from '../../services/contactService'
 import { subscribeCatalogue } from '../../services/catalogueService'
 import { getMedicineImage } from '../../constants/medicineImages'
+import heroImage from '../../assets/hero.png'
 
 const publicLinks = [
   ['Home', '/'],
@@ -35,16 +36,16 @@ export function PublicLayout({ children }) {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-5 py-4 backdrop-blur-xl">
+    <div className="min-h-screen bg-transparent">
+      <header className="app-topbar sticky top-0 z-30 border-b px-5 py-4">
         <nav className="mx-auto flex max-w-7xl items-center gap-4">
           <Link className="flex items-center gap-2 text-xl font-black text-brand-700" to="/">
-            <span className="rounded-xl bg-gradient-to-br from-teal-600 to-cyan-600 p-2 text-white">
+            <span className="brand-lockup rounded-xl p-2 text-white">
               <PackageCheck size={18} />
             </span>
             DrugTrack
           </Link>
-          <div className="ml-auto hidden items-center gap-5 md:flex">
+          <div className="public-nav-links ml-auto hidden items-center gap-2 md:flex">
             {links}
             <Link className="font-semibold text-slate-700 transition hover:text-brand-700" to="/login">
               Login
@@ -126,7 +127,7 @@ export function HomePage() {
   return (
     <PublicLayout>
       <main>
-        <section className="relative overflow-hidden border-b border-teal-100 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.1),_transparent_28%),linear-gradient(135deg,#ecfeff_0%,#f8fafc_45%,#eff6ff_100%)] px-5">
+        <section className="public-hero relative overflow-hidden border-b border-teal-100 px-5" style={{ backgroundImage: `linear-gradient(90deg, rgba(240,253,250,0.98) 0%, rgba(240,253,250,0.88) 47%, rgba(240,253,250,0.42) 100%), url(${heroImage})` }}>
           <div className="mx-auto grid max-w-7xl gap-10 py-16 lg:grid-cols-[1.1fr_420px] lg:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-700 shadow-sm">
@@ -250,26 +251,87 @@ export function HomePage() {
 }
 
 export function AboutPage() {
+  const workflow = [
+    ['01', 'Choose your workspace', 'Customers, hospitals, pharmacies, manufacturers, distributors, and delivery staff each receive a focused workspace with the permissions and tools for their job.', HeartPulse],
+    ['02', 'Browse and place a request', 'A customer, hospital, or pharmacy browses verified medicine listings, adds stock to the cart, confirms a Tirunelveli delivery address, and places a manufacturer-directed order.', Boxes],
+    ['03', 'Manufacturer reviews the order', 'The manufacturer validates stock, batch quality, expiry, recall status, and quantities before approving the request. Every decision becomes part of the order history.', ShieldCheck],
+    ['04', 'Distributor prepares the handoff', 'Approved stock moves through distributor acceptance, processing, packing coordination, and readiness for delivery while the buyer sees each status change live.', Truck],
+    ['05', 'Delivery staff completes the journey', 'The rider receives the shipment at the Francis Xavier Engineering College source, follows the Tirunelveli route, updates live location, and completes the handoff.', MapPinned],
+    ['06', 'Recipient confirms and reviews', 'The recipient confirms delivery, rates the service, writes a review, and keeps the complete order record in history for future reference.', Activity],
+  ]
+
+  const roles = [
+    ['Buyers', 'Customers, hospitals, and pharmacies can order manufacturer stock, manage addresses, follow approvals, track shipments, and review completed deliveries.', HeartPulse],
+    ['Manufacturers', 'Create medicines, manage batches and inventory, validate incoming requests, approve safe orders, and release stock into distribution.', Building2],
+    ['Distributors', 'Receive approved orders, verify quantities and batches, prepare shipments, assign delivery staff, and hand off stock safely.', Truck],
+    ['Administrators', 'Manage users, approvals, catalogue records, batches, inventory, orders, contact messages, and system-wide history.', ShieldCheck],
+  ]
+
   return (
     <PublicLayout>
-      <main className="mx-auto max-w-5xl px-5 py-16">
-        <p className="font-semibold text-brand-700">ABOUT DRUGTRACK</p>
-        <h1 className="mt-3 text-4xl font-bold text-slate-950">A Firebase-first medicine operations platform</h1>
-        <p className="mt-5 text-lg leading-8 text-slate-600">
-          DrugTrack is built for pharmaceutical ordering and traceability: role-based authentication, organization approval,
-          batch-aware inventory, trusted checkout, shipments, notifications, QR verification, and realtime tracking.
-        </p>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+      <main className="public-content-shell public-about mx-auto max-w-7xl px-5 py-10 md:py-16">
+        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+          <div>
+            <p className="page-header-kicker">About DrugTrack</p>
+            <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-tight text-slate-950 md:text-6xl">The connected operating system for trusted medicine movement.</h1>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+              DrugTrack connects the people and organizations that make a medicine journey safe: the buyer who needs stock, the manufacturer who approves it, the distributor who prepares it, and the delivery team that completes the final handoff.
+            </p>
+          </div>
+          <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-[0_24px_55px_rgba(15,23,42,0.18)]">
+            <div className="flex items-center gap-2 text-teal-300"><ShieldCheck size={19} /><span className="text-xs font-bold uppercase tracking-[0.18em]">Built for traceability</span></div>
+            <p className="mt-5 text-2xl font-black leading-tight">Every order has an owner, every batch has a story, and every handoff leaves a record.</p>
+            <p className="mt-4 text-sm leading-6 text-slate-300">From first browse to final review, DrugTrack keeps the full supply journey visible in one place.</p>
+          </div>
+        </section>
+
+        <section className="mt-16">
+          <div className="max-w-2xl">
+            <p className="page-header-kicker">How the platform works</p>
+            <h2 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">One medicine journey, six connected moments</h2>
+            <p className="mt-3 leading-7 text-slate-600">The interface changes with the user, but the underlying process remains connected from order request to completed delivery.</p>
+          </div>
+          <div className="relative mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {workflow.map(([number, title, copy, Icon]) => (
+              <article className="public-feature-card panel group relative p-6 transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,57,63,0.12)]" key={number}>
+                <div className="flex items-center justify-between"><span className="text-4xl font-black text-teal-100">{number}</span><span className="rounded-2xl bg-teal-50 p-3 text-teal-700"><Icon size={22} /></span></div>
+                <h3 className="mt-6 text-lg font-black text-slate-950">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-16 rounded-[2rem] bg-gradient-to-br from-teal-700 via-cyan-700 to-slate-900 p-6 text-white shadow-[0_25px_60px_rgba(15,118,110,0.2)] md:p-10">
+          <div className="max-w-3xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-200">The buyer-to-delivery flow</p>
+            <h2 className="mt-3 text-3xl font-black md:text-4xl">Browse. Approve. Move. Deliver. Learn.</h2>
+            <p className="mt-4 text-sm leading-7 text-teal-50 md:text-base">A buyer starts with a medicine requirement. DrugTrack turns it into a structured request that can be validated, packed, routed, tracked, confirmed, rated, and revisited later.</p>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center gap-2 text-sm font-bold">
+            {['Buyer request', 'Manufacturer approval', 'Distributor handoff', 'Rider route', 'Recipient review'].map((step, index) => <span key={step} className="inline-flex items-center gap-2"><span className="rounded-full border border-white/25 bg-white/10 px-3 py-2 backdrop-blur">{step}</span>{index < 4 && <ArrowRight size={16} className="text-teal-200" />}</span>)}
+          </div>
+        </section>
+
+        <section className="mt-16">
+          <p className="page-header-kicker">Made for every role</p>
+          <h2 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">A dedicated view for every responsibility</h2>
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {roles.map(([title, copy, Icon]) => <article className="public-feature-card panel p-6" key={title}><span className="inline-flex rounded-2xl bg-slate-950 p-3 text-teal-300"><Icon size={21} /></span><h3 className="mt-5 text-lg font-black text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p></article>)}
+          </div>
+        </section>
+
+        <section className="mt-16 grid gap-4 md:grid-cols-3">
           {[
-            ['Amazon-like discovery', 'Customers browse controlled catalogue projections and order through a trusted checkout.'],
-            ['Healthcare SaaS control', 'Operational roles manage private inventory, batches, and approvals through scoped dashboards.'],
-            ['Logistics visibility', 'Orders, shipments, tracking events, and delivery updates stay connected.'],
-          ].map(([title, copy]) => (
-            <article className="panel p-5" key={title}>
-              <h2 className="font-bold text-slate-950">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">{copy}</p>
-            </article>
-          ))}
+            ['Verified by design', 'Role-based access, organization approval, batch validation, and server-authoritative checkout keep the workflow accountable.'],
+            ['Live by default', 'Firestore listeners connect stock, order status, shipment telemetry, notifications, reviews, and history as events happen.'],
+            ['Ready for real operations', 'Dashboards, search, filters, saved addresses, delivery history, ratings, and admin oversight support repeated daily work.'],
+          ].map(([title, copy]) => <article className="rounded-[1.5rem] border border-slate-200 bg-white/75 p-6 shadow-sm" key={title}><h3 className="text-lg font-black text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p></article>)}
+        </section>
+
+        <div className="mt-16 flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-teal-100 bg-white/80 p-6 shadow-sm">
+          <div><p className="text-lg font-black text-slate-950">Ready to explore the live catalogue?</p><p className="mt-1 text-sm text-slate-500">Start with verified medicines or choose the workspace built for your role.</p></div>
+          <div className="flex flex-wrap gap-3"><Link className="brand-button" to="/medicines">Browse medicines</Link><Link className="soft-button" to="/get-started">Choose workspace</Link></div>
         </div>
       </main>
     </PublicLayout>
@@ -293,7 +355,7 @@ export function CategoriesPage() {
 
   return (
     <PublicLayout>
-      <main className="mx-auto max-w-7xl px-5 py-16">
+      <main className="public-content-shell public-categories mx-auto max-w-7xl px-5 py-16">
         <p className="font-semibold text-brand-700">CATEGORIES</p>
         <h1 className="mt-3 text-4xl font-bold text-slate-950">Medicine categories from the live catalogue</h1>
         {!items ? (
@@ -303,7 +365,7 @@ export function CategoriesPage() {
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {grouped.map(category => (
-              <Link className="panel block p-5 transition hover:-translate-y-0.5 hover:shadow-md" to="/medicines" key={category.id}>
+              <Link className="public-feature-card panel block p-5 transition hover:-translate-y-1 hover:shadow-md" to="/medicines" key={category.id}>
                 <Boxes className="text-brand-600" />
                 <h2 className="mt-4 text-xl font-bold text-slate-950">{category.name}</h2>
                 <p className="mt-2 text-sm text-slate-500">
@@ -329,12 +391,12 @@ export function SupplyChainPage() {
 
   return (
     <PublicLayout>
-      <main className="mx-auto max-w-7xl px-5 py-16">
+      <main className="public-content-shell public-supply mx-auto max-w-7xl px-5 py-16">
         <p className="font-semibold text-brand-700">SUPPLY CHAIN</p>
         <h1 className="mt-3 text-4xl font-bold text-slate-950">Trace every medicine journey</h1>
         <div className="mt-10 grid gap-4 lg:grid-cols-5">
           {steps.map(([title, copy, Icon], index) => (
-            <article className="panel p-5" key={title}>
+            <article className="public-feature-card panel p-5" key={title}>
               <p className="text-sm font-semibold text-brand-700">STEP {index + 1}</p>
               <Icon className="mt-5 text-brand-600" />
               <h2 className="mt-4 font-bold text-slate-950">{title}</h2>
@@ -367,7 +429,7 @@ export function ContactPage() {
 
   return (
     <PublicLayout>
-      <main className="mx-auto max-w-3xl px-5 py-16">
+      <main className="public-content-shell public-contact mx-auto max-w-3xl px-5 py-16">
         <p className="font-semibold text-brand-700">CONTACT</p>
         <h1 className="mt-3 text-4xl font-bold text-slate-950">Talk to DrugTrack</h1>
         <p className="mt-3 text-slate-600">Messages are stored in Firestore `contactMessages` for administrator review.</p>

@@ -1,1 +1,1 @@
-export default function LoadingSpinner(){return <div className="flex min-h-screen items-center justify-center"><div className="h-9 w-9 animate-spin rounded-full border-4 border-teal-100 border-t-brand-600" /></div>}
+export default function LoadingSpinner(){return <div className="flex min-h-[18rem] items-center justify-center"><div className="relative h-12 w-12 animate-spin rounded-full border-4 border-teal-100 border-t-brand-600 shadow-lg shadow-teal-100" /></div>}
