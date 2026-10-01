@@ -1,3 +1,49 @@
+.rider-map-icon {
+  background: transparent;
+  border: 0;
+}
+
+.rider-map-pin {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: #0d9488;
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.38);
+  font-size: 21px;
+  line-height: 1;
+}
+
+.celebration-confetti {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.celebration-confetti span {
+  position: absolute;
+  top: -12%;
+  left: calc((var(--confetti-index) * 5.5%) + 2%);
+  width: 9px;
+  height: 18px;
+  border-radius: 3px;
+  background: #14b8a6;
+  animation: confetti-fall 2.8s linear infinite;
+  animation-delay: calc(var(--confetti-index) * -0.15s);
+}
+
+.celebration-confetti span:nth-child(3n) { background: #f59e0b; }
+.celebration-confetti span:nth-child(3n + 1) { background: #ef4444; }
+.celebration-confetti span:nth-child(4n) { transform: rotate(45deg); }
+
+@keyframes confetti-fall {
+  0% { opacity: 0; transform: translate3d(0, -10vh, 0) rotate(0deg); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(30px, 115vh, 0) rotate(540deg); }
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

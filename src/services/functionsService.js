@@ -4,6 +4,7 @@ import { db, firebaseSetupError, functions, isFirebaseConfigured } from '../fire
 import { createMockRecord, getMockCollection, updateMockRecord } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
 import { normalizeOrderStatus } from '../constants/statuses'
+import { MANUFACTURER_HUB } from '../constants/tracking'
 
 const call = name => {
   if (!isFirebaseConfigured) throw Error(firebaseSetupError)
@@ -147,12 +148,16 @@ export const updateTrustedOrderStatus = async data => {
 }
 
 export const createTrustedShipment = async data => {
+  const source = data.source || MANUFACTURER_HUB
+  const destination = data.destination || {}
   if (!shouldUseMockStore() && db && isFirebaseConfigured) {
     const result = await call('createOrderShipment')({
       orderId: data.orderId,
       carrierName: data.carrierName,
       trackingNumber: data.trackingNumber,
       estimatedDelivery: data.estimatedDelivery,
+      source,
+      destination,
     })
     return result.data
   }
@@ -162,6 +167,15 @@ export const createTrustedShipment = async data => {
     orderNumber: order?.orderNumber || data.orderId,
     customerId: order?.customerId || order?.buyerId || '',
     recipient: order?.deliveryAddress || {},
+    source,
+    sourceName: source.name,
+    sourceAddress: source.address,
+    sourceLatitude: Number(source.latitude),
+    sourceLongitude: Number(source.longitude),
+    destination,
+    destinationLatitude: Number(destination.latitude),
+    destinationLongitude: Number(destination.longitude),
+    destinationAddress: destination.displayName || '',
     shipmentNumber: `DT-SHP-${String(Date.now()).slice(-6)}`,
     status: 'ASSIGNED',
     simulatedGps: true,

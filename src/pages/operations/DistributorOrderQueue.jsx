@@ -12,6 +12,7 @@ import { assignTrustedShipment, createTrustedShipment, updateTrustedOrderStatus 
 import { demoAccounts } from '../../data/demoAccounts'
 import { where } from 'firebase/firestore'
 import { subscribeRecords } from '../../services/firestoreCrud'
+import { resolveShipmentCoordinates } from '../../services/shipmentService'
 
 const actions = {
   READY_FOR_DISTRIBUTOR: 'DISTRIBUTOR_RECEIVED',
@@ -72,7 +73,8 @@ export default function DistributorOrderQueue() {
   const prepareShipment = async order => {
     setBusyId(order.id)
     try {
-      const shipment = await createTrustedShipment({ orderId: order.id, carrierName: 'DrugTrack Logistics' })
+      const coordinates = await resolveShipmentCoordinates(order.deliveryAddress)
+      const shipment = await createTrustedShipment({ orderId: order.id, carrierName: 'DrugTrack Logistics', ...coordinates })
       await assignTrustedShipment({ shipmentId: shipment.shipmentId, deliveryStaffId: staff })
       toast.success('Shipment created and delivery staff assigned.')
     } catch (error) {

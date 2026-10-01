@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ArrowLeft, Clock, MapPin, Navigation, PackageCheck, ShieldCheck, Truck } from 'lucide-react'
 import L from 'leaflet'
-import { subscribeShipment, subscribeTrackingEvents } from '../../services/shipmentService'
+import { geocodeAddress, subscribeShipment, subscribeTrackingEvents } from '../../services/shipmentService'
 import PageHeader from '../../components/common/PageHeader'
 import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/feedback/LoadingSpinner'
+import { DEFAULT_MAP_ZOOM, isTirunelveliCoordinate, MANUFACTURER_HUB, TIRUNELVELI_DEFAULT_DESTINATION, TIRUNELVELI_DISTRIBUTION_HUB } from '../../constants/tracking'
+
+const riderIcon = L.divIcon({
+  className: 'rider-map-icon',
+  html: '<div class="rider-map-pin" aria-label="Delivery rider">&#128690;</div>',
+  iconSize: [38, 38],
+  iconAnchor: [19, 19],
+})
 
 // Fix default leaflet marker icon in bundlers
 delete L.Icon.Default.prototype._getIconUrl
@@ -23,10 +31,23 @@ function formatDateTime(val) {
   return new Date(val).toLocaleString()
 }
 
+function MapViewport({ points }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (points.length > 1) map.fitBounds(points, { padding: [32, 32] })
+  }, [map, points])
+
+  return null
+}
+
 export default function TrackingMap() {
   const { shipmentId } = useParams()
   const [shipment, setShipment] = useState(undefined)
   const [events, setEvents] = useState([])
+  const [route, setRoute] = useState([])
+  const [resolvedDestination, setResolvedDestination] = useState(null)
+  const [simulatedPosition, setSimulatedPosition] = useState(null)
 
   useEffect(() => {
     return subscribeShipment(shipmentId, setShipment)
@@ -35,6 +56,70 @@ export default function TrackingMap() {
   useEffect(() => {
     return subscribeTrackingEvents(shipmentId, setEvents)
   }, [shipmentId])
+
+  useEffect(() => {
+    if (!shipment) {
+      setResolvedDestination(null)
+      return undefined
+    }
+    const storedDestination = [Number(shipment.destinationLatitude), Number(shipment.destinationLongitude)]
+    if (storedDestination.every(Number.isFinite) && isTirunelveliCoordinate(storedDestination[0], storedDestination[1])) {
+      setResolvedDestination({ latitude: storedDestination[0], longitude: storedDestination[1], displayName: shipment.destinationAddress || '' })
+      return undefined
+    }
+    let active = true
+    geocodeAddress(shipment.destination || shipment.recipient || shipment.deliveryAddress).then(destination => {
+      if (!active) return
+      setResolvedDestination(destination && isTirunelveliCoordinate(destination.latitude, destination.longitude) ? destination : TIRUNELVELI_DEFAULT_DESTINATION)
+    })
+    return () => { active = false }
+  }, [shipment])
+
+  useEffect(() => {
+    if (!shipment) return undefined
+    const source = [MANUFACTURER_HUB.latitude, MANUFACTURER_HUB.longitude]
+    const intermediate = [TIRUNELVELI_DISTRIBUTION_HUB.latitude, TIRUNELVELI_DISTRIBUTION_HUB.longitude]
+    const destination = [Number(resolvedDestination?.latitude), Number(resolvedDestination?.longitude)]
+    const current = [Number(shipment.currentLatitude), Number(shipment.currentLongitude)]
+    if (!destination.every(Number.isFinite)) {
+      setRoute([source])
+      return undefined
+    }
+
+    const fallback = [source, intermediate, current.every(Number.isFinite) ? current : intermediate, destination]
+    setRoute(fallback)
+    const controller = new AbortController()
+    fetch(`https://router.project-osrm.org/route/v1/driving/${source[1]},${source[0]};${intermediate[1]},${intermediate[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        const coordinates = data?.routes?.[0]?.geometry?.coordinates
+        if (coordinates?.length) setRoute(coordinates.map(([longitude, latitude]) => [latitude, longitude]))
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [shipment, resolvedDestination])
+
+  useEffect(() => {
+    if (!route.length || !shipment) return undefined
+    const actualPosition = [Number(shipment.currentLatitude), Number(shipment.currentLongitude)]
+    if (!shipment.simulatedGps && actualPosition.every(Number.isFinite)) {
+      setSimulatedPosition(actualPosition)
+      return undefined
+    }
+    const moving = ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(shipment.status)
+    if (!moving) {
+      setSimulatedPosition(route[0])
+      return undefined
+    }
+    let positionIndex = Math.max(0, Math.floor(route.length * (shipment.status === 'PICKED_UP' ? 0.15 : shipment.status === 'OUT_FOR_DELIVERY' ? 0.75 : 0.4)))
+    const advance = () => {
+      setSimulatedPosition(route[positionIndex])
+      positionIndex = Math.min(route.length - 1, positionIndex + Math.max(1, Math.floor(route.length / 100)))
+    }
+    advance()
+    const timer = window.setInterval(advance, 1800)
+    return () => window.clearInterval(timer)
+  }, [route, shipment])
 
   if (shipment === undefined) return <LoadingSpinner />
 
@@ -65,7 +150,13 @@ export default function TrackingMap() {
 
   const lat = Number(shipment.currentLatitude)
   const lng = Number(shipment.currentLongitude)
-  const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+  const courierPoint = simulatedPosition || ([lat, lng].every(Number.isFinite) ? [lat, lng] : null)
+  const hasCoordinates = courierPoint?.every(Number.isFinite) && courierPoint.some(value => value !== 0)
+  const sourcePoint = [MANUFACTURER_HUB.latitude, MANUFACTURER_HUB.longitude]
+  const intermediatePoint = [TIRUNELVELI_DISTRIBUTION_HUB.latitude, TIRUNELVELI_DISTRIBUTION_HUB.longitude]
+  const destinationPoint = [Number(resolvedDestination?.latitude), Number(resolvedDestination?.longitude)]
+  const mapPoints = [sourcePoint, intermediatePoint, ...(hasCoordinates ? [courierPoint] : []), ...(destinationPoint.every(Number.isFinite) ? [destinationPoint] : [])]
+  const hasRoute = route.length > 1 && mapPoints.length > 1
 
   return (
     <div className="space-y-6">
@@ -114,19 +205,42 @@ export default function TrackingMap() {
               </span>
             </div>
 
-            {hasCoordinates ? (
+            {hasRoute ? (
               <div className="h-96 w-full">
                 <MapContainer
-                  center={[lat, lng]}
-                  zoom={13}
+                  center={hasCoordinates ? courierPoint : sourcePoint}
+                  zoom={DEFAULT_MAP_ZOOM}
                   scrollWheelZoom={false}
                   className="h-full w-full"
                 >
+                  <MapViewport points={mapPoints} />
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   />
-                  <Marker position={[lat, lng]}>
+                  <Marker position={sourcePoint}>
+                    <Popup>
+                      <p className="font-bold text-slate-900">Manufacturer source</p>
+                      <p className="text-xs text-slate-600">{shipment.sourceName || MANUFACTURER_HUB.name}</p>
+                      <p className="text-xs text-slate-500">{MANUFACTURER_HUB.address}</p>
+                    </Popup>
+                  </Marker>
+                  <Marker position={intermediatePoint}>
+                    <Popup>
+                      <p className="font-bold text-slate-900">Intermediate handoff</p>
+                      <p className="text-xs text-slate-600">{TIRUNELVELI_DISTRIBUTION_HUB.name}</p>
+                    </Popup>
+                  </Marker>
+                  {destinationPoint.every(Number.isFinite) && (
+                    <Marker position={destinationPoint}>
+                      <Popup>
+                        <p className="font-bold text-slate-900">Buyer destination</p>
+                        <p className="text-xs text-slate-600">{shipment.destinationAddress || shipment.recipient?.addressLine1 || 'Saved delivery address'}</p>
+                      </Popup>
+                    </Marker>
+                  )}
+                  {route.length > 1 && <Polyline positions={route} pathOptions={{ color: '#0d9488', weight: 5, opacity: 0.8 }} />}
+                  {hasCoordinates && <Marker position={courierPoint} icon={riderIcon}>
                     <Popup>
                       <div className="text-xs">
                         <p className="font-bold text-slate-900">{shipment.shipmentNumber}</p>
@@ -134,7 +248,7 @@ export default function TrackingMap() {
                         <p className="text-teal-700 mt-0.5 font-semibold">{shipment.simulatedGps ? 'Simulated courier position' : 'Live courier position'}</p>
                       </div>
                     </Popup>
-                  </Marker>
+                  </Marker>}
                 </MapContainer>
               </div>
             ) : (
@@ -144,7 +258,7 @@ export default function TrackingMap() {
                 </div>
                 <h3 className="mt-3 text-sm font-semibold text-slate-800">Coordinates Awaiting Dispatch</h3>
                 <p className="mt-1 text-xs text-slate-500 max-w-xs">
-                  The delivery courier has not transmitted live telemetry yet. Real-time GPS markers appear once out for delivery.
+                  The manufacturer route is ready. The courier marker will appear when delivery staff transmits live telemetry.
                 </p>
               </div>
             )}

@@ -3,6 +3,33 @@ import { db } from '../firebase/config'
 import { createTrustedShipment, updateTrustedShipmentStatus } from './functionsService'
 import { getMockCollection, subscribeStore } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
+import { MANUFACTURER_HUB } from '../constants/tracking'
+
+export const geocodeAddress = async address => {
+  const queryText = typeof address === 'string'
+    ? address
+    : [address?.addressLine1, address?.addressLine2, address?.city, address?.state, address?.postalCode, address?.country].filter(Boolean).join(', ')
+  if (!queryText.trim()) return null
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&viewbox=77.55,8.90,77.95,8.55&q=${encodeURIComponent(queryText)}`)
+    if (!response.ok) return null
+    const results = await response.json()
+    const first = results[0]
+    if (!first) return null
+    return { latitude: Number(first.lat), longitude: Number(first.lon), displayName: first.display_name }
+  } catch (error) {
+    console.warn('Unable to geocode delivery address:', error?.message || error)
+    return null
+  }
+}
+
+export const resolveShipmentCoordinates = async address => {
+  const destination = await geocodeAddress(address)
+  return {
+    source: MANUFACTURER_HUB,
+    destination: destination || { latitude: null, longitude: null, displayName: '' },
+  }
+}
 
 export const createShipment = async data => {
   return createTrustedShipment(data)

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { PartyPopper } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/common/PageHeader'
 import StatusBadge from '../../components/common/StatusBadge'
@@ -226,12 +227,16 @@ export function OrderDetailPage() {
   const [shipment, setShipment] = useState(null)
   const [review, setReview] = useState({ deliveryRating: 5, serviceRating: 5, comment: '' })
   const [busy, setBusy] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
 
   useEffect(() => subscribeOrder(orderId, setOrder), [orderId])
   useEffect(() => {
     if (!order?.shipmentId) return undefined
     return subscribeShipment(order.shipmentId, setShipment)
   }, [order?.shipmentId])
+  useEffect(() => {
+    if (order?.orderStatus === 'COMPLETED') setShowCelebration(true)
+  }, [order?.orderStatus])
 
   if (order === undefined) return <LoadingSpinner />
   if (!order) return <EmptyState title="Order not found" description="This order is unavailable or you do not have access." />
@@ -260,6 +265,22 @@ export function OrderDetailPage() {
 
   return (
     <>
+      {showCelebration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5" role="dialog" aria-modal="true" aria-label="Order completed">
+          <div className="celebration-confetti" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, index) => <span key={index} style={{ '--confetti-index': index }} />)}
+          </div>
+          <div className="w-full max-w-md rounded-3xl border border-teal-100 bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+              <PartyPopper size={32} />
+            </div>
+            <p className="mt-5 text-3xl" aria-hidden="true">🎉</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">Order completed</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Thank you for confirming delivery and sharing your review. This order is now part of your complete history.</p>
+            <button type="button" onClick={() => setShowCelebration(false)} className="mt-6 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">Continue</button>
+          </div>
+        </div>
+      )}
       <PageHeader title={order.orderNumber || 'Order details'} description="Realtime order status, delivery address, items, and shipment access." />
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <section className="panel p-5">
