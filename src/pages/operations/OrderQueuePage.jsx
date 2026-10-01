@@ -18,7 +18,7 @@ const nextAction = {
   PACKED: 'READY_FOR_DISTRIBUTOR',
 }
 
-const terminal = new Set(['REJECTED', 'CANCELLED', 'COMPLETED', 'READY_FOR_DISTRIBUTOR', 'READY_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED'])
+const terminal = new Set(['REJECTED', 'CANCELLED', 'COMPLETED', 'READY_FOR_DISTRIBUTOR', 'READY_FOR_DELIVERY', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED'])
 
 function currency(value) {
   return `Rs. ${Number(value || 0).toFixed(2)}`
@@ -28,10 +28,11 @@ function label(status) {
   return status === 'SHIPMENT' ? 'Create shipment' : `Move to ${status.replaceAll('_', ' ')}`
 }
 
-export default function OrderQueuePage({ admin = false }) {
+export default function OrderQueuePage({ admin = false, history = false }) {
   const { currentUser, role } = useAuth()
   const [orders, setOrders] = useState(null)
-  const [filter, setFilter] = useState('ACTIVE')
+  const [filter, setFilter] = useState(history ? 'ALL' : 'ACTIVE')
+  const [buyerFilter, setBuyerFilter] = useState('ALL')
   const [busyId, setBusyId] = useState('')
 
   useEffect(() => {
@@ -42,10 +43,11 @@ export default function OrderQueuePage({ admin = false }) {
 
   const visible = useMemo(() => {
     if (!orders) return []
-    if (filter === 'ALL') return orders
-    if (filter === 'ACTIVE') return orders.filter(order => !terminal.has(order.orderStatus))
-    return orders.filter(order => order.orderStatus === filter)
-  }, [orders, filter])
+    const byBuyer = buyerFilter === 'ALL' ? orders : orders.filter(order => (order.buyerRole || 'CUSTOMER') === buyerFilter)
+    if (filter === 'ALL') return byBuyer
+    if (filter === 'ACTIVE') return byBuyer.filter(order => !terminal.has(order.orderStatus))
+    return byBuyer.filter(order => order.orderStatus === filter)
+  }, [orders, filter, buyerFilter])
 
   if (!orders) return <LoadingSpinner />
 
@@ -105,13 +107,21 @@ export default function OrderQueuePage({ admin = false }) {
   return (
     <>
       <PageHeader
-        title={admin ? 'All orders' : `${role.replaceAll('_', ' ')} orders`}
-        description="Trusted operational order queue. Status updates call Cloud Functions instead of editing Firestore directly."
+        title={history ? `${admin ? 'All' : role.replaceAll('_', ' ')} order history` : admin ? 'All orders' : role === ROLES.MANUFACTURER ? 'Manufacturer order queue' : `Incoming ${role.replaceAll('_', ' ').toLowerCase()} orders`}
+        description={history ? 'Complete operational ledger across every buyer, status transition, and fulfillment handoff.' : admin ? 'System-wide order oversight across every buyer type.' : 'Process incoming orders for this facility. Your own purchases and history are available in their dedicated views.'}
       />
 
       <div className="mb-4 flex flex-wrap gap-3">
+        {(admin || role === ROLES.MANUFACTURER) && (
+          <select className="field max-w-xs bg-white" value={buyerFilter} onChange={event => setBuyerFilter(event.target.value)}>
+            <option value="ALL">All buyer types</option>
+            <option value="CUSTOMER">Customers</option>
+            <option value="PHARMACY">Pharmacies</option>
+            <option value="HOSPITAL">Hospitals</option>
+          </select>
+        )}
         <select className="field max-w-xs bg-white" value={filter} onChange={event => setFilter(event.target.value)}>
-          {['ACTIVE', 'ALL', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'COMPLETED', 'CANCELLED'].map(
+          {['ACTIVE', 'ALL', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED', 'COMPLETED', 'CANCELLED'].map(
             item => (
               <option key={item} value={item}>
                 {item.replaceAll('_', ' ')}
@@ -128,7 +138,7 @@ export default function OrderQueuePage({ admin = false }) {
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
-                {['Order', 'Customer', 'Items', 'Amount', 'Status', 'Actions'].map(item => (
+                {['Order', 'Buyer', 'Items', 'Amount', 'Status', 'Actions'].map(item => (
                   <th className="p-3 font-semibold" key={item}>
                     {item}
                   </th>
@@ -137,15 +147,18 @@ export default function OrderQueuePage({ admin = false }) {
             </thead>
             <tbody>
               {visible.map(order => {
-                const action = nextAction[order.orderStatus]
-                const cancellable = ['PENDING', 'UNDER_REVIEW', 'PROCESSING', 'PACKED'].includes(order.orderStatus)
+                const action = history ? null : nextAction[order.orderStatus]
+                const cancellable = !history && ['PENDING', 'UNDER_REVIEW', 'PROCESSING', 'PACKED'].includes(order.orderStatus)
                 return (
                   <tr className="border-t border-slate-100" key={order.id}>
                     <td className="p-3">
                       <p className="font-semibold text-slate-950">{order.orderNumber}</p>
                       <p className="text-xs text-slate-500">{order.id}</p>
                     </td>
-                    <td className="p-3 text-slate-600">{order.buyerName || order.customerName || order.customerId}</td>
+                    <td className="p-3 text-slate-600">
+                      <p>{order.buyerName || order.customerName || order.customerId || order.buyerId}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-teal-700">{order.buyerRole || 'CUSTOMER'}</p>
+                    </td>
                     <td className="p-3 text-slate-600">
                       {(order.items || []).map(item => `${item.drugName} x${item.quantity}`).join(', ')}
                       <p className="mt-1 text-xs text-slate-400">{(order.items || []).map(item => `Batch ${item.batchId || 'n/a'} | Avail ${item.availableQuantity ?? 'n/a'} | Reserved ${item.reservedQuantity ?? 'n/a'} | Expiry ${item.expiryDate || 'n/a'} | Recall ${item.recallStatus || 'n/a'}`).join(' | ')}</p>

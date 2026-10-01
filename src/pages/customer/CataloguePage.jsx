@@ -94,6 +94,7 @@ export default function CataloguePage() {
         manufacturerName: item.manufacturerName,
         distributorId: item.distributorId,
         distributorName: item.distributorName,
+        orderTarget: 'MANUFACTURER',
       })
       toast.success(`Added ${qty} × ${item.name} to cart`)
     } catch (error) {
@@ -365,9 +366,9 @@ export default function CataloguePage() {
                         <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 border-t border-slate-100 pt-2">
                           <Building2 size={13} className="text-slate-400 shrink-0" />
                           <span className="truncate">
-                            Sold by:{' '}
+                            Manufactured by:{' '}
                             <span className="font-semibold text-slate-700">
-                              {item.sellerName || 'Verified Facility'}
+                              {item.manufacturerName || 'Verified Manufacturer'}
                             </span>
                           </span>
                         </div>
@@ -426,7 +427,7 @@ export default function CataloguePage() {
                             onClick={() => handleAddToCart(item)}
                             className="flex-1 rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-40 transition shadow-2xs"
                           >
-                            {isAdding ? 'Adding...' : inStock ? `Add to Cart` : 'Unavailable'}
+                            {isAdding ? 'Adding...' : inStock ? 'Add to Manufacturer Order' : 'Unavailable'}
                           </button>
                         ) : (
                           <Link

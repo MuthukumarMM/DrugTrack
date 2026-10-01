@@ -35,6 +35,7 @@ export const createTrustedOrder = async data => {
   const payload = {
     buyerId: data.buyerId || data.customerId || data.userId,
     buyerRole: data.buyerRole || 'CUSTOMER',
+    orderTarget: data.orderTarget || 'MANUFACTURER',
     address: data.address || data.deliveryAddress || {},
     paymentMethod: data.paymentMethod || 'CASH_ON_DELIVERY',
     items: Array.isArray(data.items) ? data.items.map(item => ({
@@ -72,6 +73,9 @@ export const createTrustedOrder = async data => {
     customerId: data.customerId || payload.buyerId,
     buyerId: payload.buyerId,
     buyerRole: payload.buyerRole,
+    orderTarget: payload.orderTarget,
+    destinationType: payload.buyerRole,
+    destinationId: payload.buyerId,
     sellerId: data.sellerId || firstItem.sellerId || '',
     sellerType: data.sellerType || firstItem.sellerType || '',
     sellerName: data.sellerName || firstItem.sellerName || '',
@@ -188,7 +192,11 @@ export const updateTrustedShipmentStatus = async data => {
   })
   if (shipment?.orderId) {
     const order = getMockCollection('orders')?.find(item => item.id === shipment.orderId)
-    const orderStatus = data.status === 'DELIVERED' ? 'DELIVERED' : data.status === 'OUT_FOR_DELIVERY' ? 'READY_FOR_DELIVERY' : order?.orderStatus
+    const orderStatus = data.status === 'DELIVERED'
+      ? 'DELIVERED'
+      : ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(data.status)
+        ? data.status
+        : order?.orderStatus
     if (orderStatus && orderStatus !== order?.orderStatus) {
       updateMockRecord('orders', shipment.orderId, {
         status: orderStatus,

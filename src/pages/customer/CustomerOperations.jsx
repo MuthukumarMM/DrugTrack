@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { markNotificationRead, subscribeNotifications } from '../../services/notificationService'
 import { removeAddress, saveAddress, subscribeAddresses } from '../../services/addressService'
 import { subscribeOrder, subscribeOrders } from '../../services/orderService'
+import { subscribeShipment } from '../../services/shipmentService'
 import { confirmTrustedDelivery, createTrustedReview } from '../../services/functionsService'
 
 const blankAddress = {
@@ -23,7 +24,23 @@ const blankAddress = {
   isDefault: false,
 }
 
-const timeline = ['PENDING', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_ACCEPTED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED', 'COMPLETED']
+const timeline = [
+  { status: 'PENDING', owner: 'Buyer', label: 'Order placed' },
+  { status: 'UNDER_REVIEW', owner: 'Manufacturer', label: 'Under review' },
+  { status: 'APPROVED', owner: 'Manufacturer', label: 'Approved' },
+  { status: 'PROCESSING', owner: 'Manufacturer', label: 'Processing' },
+  { status: 'PACKED', owner: 'Manufacturer', label: 'Packed' },
+  { status: 'READY_FOR_DISTRIBUTOR', owner: 'Manufacturer', label: 'Ready for distributor' },
+  { status: 'DISTRIBUTOR_RECEIVED', owner: 'Distributor', label: 'Accepted' },
+  { status: 'DISTRIBUTOR_PROCESSING', owner: 'Distributor', label: 'Processing' },
+  { status: 'READY_FOR_DELIVERY', owner: 'Distributor', label: 'Ready for delivery' },
+  { status: 'PICKED_UP', owner: 'Delivery staff', label: 'Picked up' },
+  { status: 'IN_TRANSIT', owner: 'Delivery staff', label: 'In transit' },
+  { status: 'OUT_FOR_DELIVERY', owner: 'Delivery staff', label: 'Out for delivery' },
+  { status: 'DELIVERED', owner: 'Recipient', label: 'Delivered' },
+  { status: 'RECIPIENT_CONFIRMED', owner: 'Recipient', label: 'Confirmed' },
+  { status: 'COMPLETED', owner: 'Recipient', label: 'Rated and completed' },
+]
 const historyStatuses = new Set(['COMPLETED', 'CANCELLED', 'REJECTED'])
 
 function currency(value) {
@@ -134,13 +151,20 @@ export function AddressesPage() {
 export function OrdersPage({ history = false }) {
   const { currentUser, role } = useAuth()
   const [rows, setRows] = useState(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
 
   useEffect(() => subscribeOrders(currentUser.uid, setRows), [currentUser])
 
   const visible = useMemo(() => {
     if (!rows) return []
-    return history ? rows.filter(order => historyStatuses.has(order.orderStatus)) : rows.filter(order => !historyStatuses.has(order.orderStatus))
-  }, [rows, history])
+    const baseRows = history ? rows : rows.filter(order => !historyStatuses.has(order.orderStatus))
+    const term = search.trim().toLowerCase()
+    return baseRows.filter(order => {
+      const matchesSearch = !term || `${order.orderNumber} ${order.orderStatus} ${(order.items || []).map(item => item.drugName).join(' ')}`.toLowerCase().includes(term)
+      return matchesSearch && (statusFilter === 'ALL' || order.orderStatus === statusFilter)
+    })
+  }, [rows, history, search, statusFilter])
 
   if (!rows) return <LoadingSpinner />
 
@@ -149,13 +173,22 @@ export function OrdersPage({ history = false }) {
   return (
     <>
       <PageHeader
-        title={history ? 'Order history' : 'My orders'}
-        description={history ? 'Completed, cancelled, and returned orders.' : 'Realtime status updates for trusted DrugTrack orders.'}
+        title={history ? 'Complete purchase history' : 'My orders'}
+        description={history ? 'A complete ledger of every order, approval, delivery, cancellation, and review.' : 'Realtime status updates for trusted DrugTrack orders.'}
       />
+      {history && (
+        <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_220px]">
+          <input className="field bg-white" placeholder="Search order number or medicine" value={search} onChange={event => setSearch(event.target.value)} />
+          <select className="field bg-white" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+            <option value="ALL">All statuses</option>
+            {['PENDING', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED', 'COMPLETED', 'REJECTED', 'CANCELLED'].map(status => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}
+          </select>
+        </div>
+      )}
       {!visible.length ? (
         <EmptyState
-          title={history ? 'No order history yet' : 'No active orders yet'}
-          description={history ? 'Finished orders will appear here.' : 'Browse verified medicines to place your first order.'}
+          title={history ? 'No orders match this history view' : 'No active orders yet'}
+          description={history ? 'Placed orders will remain available here with their complete status trail.' : 'Browse verified medicines to place your first order.'}
         />
       ) : (
         <div className="space-y-3">
@@ -190,17 +223,31 @@ export function OrderDetailPage() {
   const { orderId } = useParams()
   const { role } = useAuth()
   const [order, setOrder] = useState(undefined)
+  const [shipment, setShipment] = useState(null)
   const [review, setReview] = useState({ deliveryRating: 5, serviceRating: 5, comment: '' })
   const [busy, setBusy] = useState(false)
 
   useEffect(() => subscribeOrder(orderId, setOrder), [orderId])
+  useEffect(() => {
+    if (!order?.shipmentId) return undefined
+    return subscribeShipment(order.shipmentId, setShipment)
+  }, [order?.shipmentId])
 
   if (order === undefined) return <LoadingSpinner />
   if (!order) return <EmptyState title="Order not found" description="This order is unavailable or you do not have access." />
 
   const buyerBasePath = role === 'PHARMACY' ? '/pharmacy' : role === 'HOSPITAL' ? '/hospital' : ''
 
-  const currentIndex = timeline.indexOf(order.orderStatus)
+  const shipmentOrderStatus = {
+    ASSIGNED: 'READY_FOR_DELIVERY',
+    ACCEPTED: 'READY_FOR_DELIVERY',
+    PICKED_UP: 'PICKED_UP',
+    IN_TRANSIT: 'IN_TRANSIT',
+    OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+    DELIVERED: 'DELIVERED',
+  }
+  const displayStatus = shipmentOrderStatus[shipment?.status] || order.orderStatus
+  const currentIndex = timeline.findIndex(step => step.status === displayStatus)
   const confirmReceipt = async () => {
     setBusy(true)
     try { await confirmTrustedDelivery(order.id); toast.success('Receipt confirmed.') } catch (error) { toast.error(error.message || 'Unable to confirm receipt.') } finally { setBusy(false) }
@@ -234,7 +281,7 @@ export function OrderDetailPage() {
           <section className="panel p-5">
             <h2 className="text-lg font-bold text-slate-950">Summary</h2>
             <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-slate-500">Order status</dt><dd><StatusBadge status={order.orderStatus} /></dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Order status</dt><dd><StatusBadge status={displayStatus} /></dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Payment</dt><dd className="font-semibold">{order.paymentStatus}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Subtotal</dt><dd>{currency(order.subtotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Delivery</dt><dd>{currency(order.deliveryFee)}</dd></div>
@@ -262,9 +309,10 @@ export function OrderDetailPage() {
       <section className="panel mt-5 p-5">
         <h2 className="text-lg font-bold text-slate-950">Order timeline</h2>
         <div className="mt-5 grid gap-3 md:grid-cols-4 xl:grid-cols-8">
-          {timeline.map((status, index) => (
-            <div className={`rounded-2xl border p-3 ${index <= currentIndex ? 'border-teal-200 bg-teal-50' : 'border-slate-200 bg-white'}`} key={status}>
-              <p className={`text-sm font-bold ${index <= currentIndex ? 'text-brand-700' : 'text-slate-400'}`}>{status.replaceAll('_', ' ')}</p>
+          {timeline.map((step, index) => (
+            <div className={`rounded-2xl border p-3 transition ${index <= currentIndex ? 'border-teal-200 bg-teal-50 shadow-sm' : 'border-slate-200 bg-white'}`} key={step.status}>
+              <p className={`text-[11px] font-semibold uppercase tracking-wide ${index <= currentIndex ? 'text-teal-700' : 'text-slate-400'}`}>{step.owner}</p>
+              <p className={`mt-1 text-sm font-bold ${index <= currentIndex ? 'text-brand-700' : 'text-slate-400'}`}>{step.label}</p>
             </div>
           ))}
         </div>

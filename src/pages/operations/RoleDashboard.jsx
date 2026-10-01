@@ -50,6 +50,8 @@ const ROLE_METADATA = {
     title: 'Pharmacy Operations Dashboard',
     description: 'Manage counter inventory, low-stock reorders, batch expiry, and patient prescription orders.',
     quickActions: [
+      { label: 'Order Manufacturer Stock', to: '/pharmacy/order' },
+      { label: 'My Purchases', to: '/pharmacy/purchases' },
       { label: 'Stock & Batches', to: '/pharmacy/my-inventory' },
       { label: 'Customer Orders', to: '/pharmacy/orders' },
     ],
@@ -58,6 +60,8 @@ const ROLE_METADATA = {
     title: 'Hospital Pharmacy Command Centre',
     description: 'Oversee department inventory, critical emergency drug reserves, and ward dispensing safety.',
     quickActions: [
+      { label: 'Order Manufacturer Stock', to: '/hospital/order' },
+      { label: 'My Purchases', to: '/hospital/purchases' },
       { label: 'Hospital Inventory', to: '/hospital/inventory' },
       { label: 'Emergency Supplies', to: '/hospital/orders' },
     ],

@@ -14,7 +14,7 @@ export const subscribeOrders = (userId, callback, seller = false, field) => {
   const ownerField = field || (seller ? 'sellerId' : 'customerId')
   if (shouldUseMockStore() || !db) {
     return subscribeStore(store => {
-      const orders = (store.orders || []).filter(o => o[ownerField] === userId || (!seller && ownerField === 'customerId' && o.buyerId === userId)).map(order => {
+      const orders = (store.orders || []).filter(o => o[ownerField] === userId || (!seller && ownerField === 'customerId' && (o.buyerId === userId || o.customerId === userId))).map(order => {
         const normalizedStatus = normalizeOrderStatus(order.orderStatus || order.status)
         return { ...order, orderStatus: normalizedStatus, status: normalizedStatus }
       })

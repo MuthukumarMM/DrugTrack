@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { createMockRecord, deleteMockRecord, getMockCollection, subscribeStore, updateMockRecord } from '../data/mockStore'
 import { shouldUseMockStore } from '../firebase/mode'
@@ -11,7 +11,7 @@ export const subscribeAddresses = (uid, cb) => {
     })
   }
   try {
-    const col = collection(db, 'customers', uid, 'addresses')
+    const col = query(collection(db, 'addresses'), where('userId', '==', uid))
     return onSnapshot(
       col,
       snap => cb(snap.docs.map(x => ({ id: x.id, ...x.data() }))),
@@ -39,9 +39,9 @@ export const saveAddress = async (uid, data, id) => {
     return Promise.resolve()
   }
   try {
-    const col = collection(db, 'customers', uid, 'addresses')
+    const col = collection(db, 'addresses')
     return id
-      ? await updateDoc(doc(db, 'customers', uid, 'addresses', id), { ...data, updatedAt: serverTimestamp() })
+      ? await updateDoc(doc(db, 'addresses', id), { ...data, userId: uid, updatedAt: serverTimestamp() })
       : await addDoc(col, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
   } catch (error) {
     console.warn(`Firestore saveAddress error for ${uid}:`, error?.message || error)
@@ -59,7 +59,7 @@ export const removeAddress = async (uid, id) => {
     return Promise.resolve()
   }
   try {
-    return await deleteDoc(doc(db, 'customers', uid, 'addresses', id))
+    return await deleteDoc(doc(db, 'addresses', id))
   } catch (error) {
     console.warn(`Firestore removeAddress error for ${uid}/${id}:`, error?.message || error)
     deleteMockRecord('addresses', id)

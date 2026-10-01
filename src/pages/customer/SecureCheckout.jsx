@@ -94,7 +94,7 @@ export default function SecureCheckout() {
         />
         <div className="text-center">
           <Link
-            to="/shop"
+            to={`${buyerBasePath}/order`}
             className="inline-flex rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-teal-700 transition"
           >
             Explore Catalogue
@@ -159,7 +159,7 @@ export default function SecureCheckout() {
                 Delivery Address
               </h2>
               <Link
-                to="/addresses"
+                to={`${buyerBasePath}/addresses`}
                 className="text-xs font-semibold text-teal-700 hover:text-teal-800"
               >
                 + Manage Saved

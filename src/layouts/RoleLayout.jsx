@@ -25,7 +25,7 @@ export default function RoleLayout({ role, links = [] }) {
   const [notifications, setNotifications] = useState([])
 
   useEffect(() => {
-    if (!currentUser || role !== ROLES.CUSTOMER) return undefined
+    if (!currentUser || ![ROLES.CUSTOMER, ROLES.PHARMACY, ROLES.HOSPITAL].includes(role)) return undefined
     return subscribeCart(currentUser.uid, setCart)
   }, [currentUser, role])
 
@@ -36,6 +36,8 @@ export default function RoleLayout({ role, links = [] }) {
 
   const cartCount = useMemo(() => (cart?.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0), [cart])
   const unreadCount = useMemo(() => notifications.filter(item => !item.isRead).length, [notifications])
+  const buyerBasePath = role === ROLES.PHARMACY ? '/pharmacy' : role === ROLES.HOSPITAL ? '/hospital' : ''
+  const isBuyer = [ROLES.CUSTOMER, ROLES.PHARMACY, ROLES.HOSPITAL].includes(role)
 
   const logout = async () => {
     try {
@@ -110,8 +112,8 @@ export default function RoleLayout({ role, links = [] }) {
           </div>
 
           <div className="flex items-center gap-3">
-            {role === ROLES.CUSTOMER && (
-              <Link className="relative rounded-xl border border-slate-200 p-2 text-slate-600 hover:text-brand-700" to="/cart" aria-label="Cart">
+            {isBuyer && (
+              <Link className="relative rounded-xl border border-slate-200 p-2 text-slate-600 hover:text-brand-700" to={`${buyerBasePath}/cart`} aria-label="Cart">
                 <ShoppingCart size={18} />
                 <Badge>{cartCount}</Badge>
               </Link>
@@ -144,6 +146,7 @@ export const roleLinks = {
     { label: 'Batches', to: '/admin/batches' },
     { label: 'Inventory', to: '/admin/inventory' },
     { label: 'Orders', to: '/admin/orders' },
+    { label: 'Order History', to: '/admin/history' },
     { label: 'Profile', to: '/admin/profile' },
   ],
   MANUFACTURER: [
@@ -152,6 +155,7 @@ export const roleLinks = {
     { label: 'Batches', to: '/manufacturer/batches' },
     { label: 'Inventory', to: '/manufacturer/inventory' },
     { label: 'Orders', to: '/manufacturer/orders' },
+    { label: 'Order History', to: '/manufacturer/history' },
     { label: 'Profile', to: '/manufacturer/profile' },
   ],
   WAREHOUSE_MANAGER: [
@@ -163,18 +167,27 @@ export const roleLinks = {
     { label: 'Dashboard', to: '/distributor' },
     { label: 'Inventory', to: '/distributor/inventory' },
     { label: 'Orders', to: '/distributor/orders' },
+    { label: 'Order History', to: '/distributor/history' },
     { label: 'Profile', to: '/distributor/profile' },
   ],
   PHARMACY: [
     { label: 'Dashboard', to: '/pharmacy' },
+    { label: 'Order Medicines', to: '/pharmacy/order' },
+    { label: 'My Purchases', to: '/pharmacy/purchases' },
+    { label: 'Order History', to: '/pharmacy/history' },
+    { label: 'Saved Addresses', to: '/pharmacy/addresses' },
     { label: 'Inventory', to: '/pharmacy/my-inventory' },
-    { label: 'Orders', to: '/pharmacy/orders' },
+    { label: 'Customer Orders', to: '/pharmacy/orders' },
     { label: 'Profile', to: '/pharmacy/profile' },
   ],
   HOSPITAL: [
     { label: 'Dashboard', to: '/hospital' },
+    { label: 'Order Medicines', to: '/hospital/order' },
+    { label: 'My Purchases', to: '/hospital/purchases' },
+    { label: 'Order History', to: '/hospital/history' },
+    { label: 'Saved Addresses', to: '/hospital/addresses' },
     { label: 'Inventory', to: '/hospital/inventory' },
-    { label: 'Orders', to: '/hospital/orders' },
+    { label: 'Hospital Orders', to: '/hospital/orders' },
     { label: 'Profile', to: '/hospital/profile' },
   ],
   DELIVERY_STAFF: [{ label: 'Dashboard', to: '/delivery' }, { label: 'Profile', to: '/delivery/profile' }],
