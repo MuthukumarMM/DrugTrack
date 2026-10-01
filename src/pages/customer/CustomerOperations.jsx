@@ -179,7 +179,7 @@ export function OrdersPage({ history = false }) {
       />
       {history && (
         <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_220px]">
-          <input className="field bg-white" placeholder="Search order number or medicine" value={search} onChange={event => setSearch(event.target.value)} />
+          <input aria-label="Search order number or medicine" className="field bg-white" placeholder="Search order number or medicine" value={search} onChange={event => setSearch(event.target.value)} />
           <select className="field bg-white" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
             <option value="ALL">All statuses</option>
             {['PENDING', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'PACKED', 'READY_FOR_DISTRIBUTOR', 'DISTRIBUTOR_RECEIVED', 'DISTRIBUTOR_PROCESSING', 'READY_FOR_DELIVERY', 'DELIVERED', 'RECIPIENT_CONFIRMED', 'COMPLETED', 'REJECTED', 'CANCELLED'].map(status => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}

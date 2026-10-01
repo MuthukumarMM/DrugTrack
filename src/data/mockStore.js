@@ -27,7 +27,7 @@ const initialDrugs = [
     prescriptionRequired: true,
     distributorId: 'demo-distributor',
     description: 'High-potency broad-spectrum penicillin antibiotic manufactured according to stringent GMP standards for bacterial infections.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-05').toISOString(),
   },
@@ -46,7 +46,7 @@ const initialDrugs = [
     prescriptionRequired: false,
     distributorId: 'demo-distributor',
     description: 'Rapidly dissolving antipyretic formulation for severe fever, headache, body aches, and post-immunization discomfort.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-08').toISOString(),
   },
@@ -65,7 +65,7 @@ const initialDrugs = [
     prescriptionRequired: false,
     distributorId: 'demo-distributor',
     description: 'Non-steroidal anti-inflammatory formulation for relieving musculoskeletal pain, arthritis, dental pain, and soft tissue swelling.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1550572017-edd951aa8ca2?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-10').toISOString(),
   },
@@ -84,7 +84,7 @@ const initialDrugs = [
     prescriptionRequired: true,
     distributorId: 'demo-distributor',
     description: 'Low-dose enteric-coated antiplatelet therapy for cardiovascular protection, stroke prevention, and coronary artery maintenance.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-12').toISOString(),
   },
@@ -102,7 +102,7 @@ const initialDrugs = [
     basePrice: 65,
     prescriptionRequired: true,
     description: 'Fluoroquinolone antibiotic intended for treatment of respiratory tract infections, severe UTI, and gastrointestinal pathogen infections.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-15').toISOString(),
   },
@@ -120,7 +120,7 @@ const initialDrugs = [
     basePrice: 40,
     prescriptionRequired: false,
     description: 'Selective proton pump inhibitor for treatment of gastroesophageal reflux disease, gastric ulcers, and erosive esophagitis.',
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=900&q=85',
     status: 'ACTIVE',
     createdAt: new Date('2025-01-18').toISOString(),
   },
@@ -326,6 +326,7 @@ const initialCatalogue = initialInventory.map(inv => {
     quantity: inv.quantity,
     prescriptionRequired: Boolean(drug.prescriptionRequired),
     description: drug.description || '',
+    imageUrl: drug.imageUrl || '',
     sellerId: inv.ownerId,
     sellerType: inv.ownerType,
     sellerName: inv.ownerName,
@@ -498,7 +499,12 @@ function loadStore() {
   try {
     const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
     if (raw) {
-      return JSON.parse(raw)
+      const saved = JSON.parse(raw)
+      saved.catalogue = (saved.catalogue || []).map(item => {
+        const drug = initialDrugs.find(record => record.id === item.drugId)
+        return { ...item, imageUrl: item.imageUrl || drug?.imageUrl || '' }
+      })
+      return saved
     }
   } catch (e) {
     console.warn('Failed to load mock store from localStorage', e)

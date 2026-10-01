@@ -33,6 +33,7 @@ export default function Marketplace() {
         <p className="font-semibold">DRUGTRACK MARKETPLACE</p>
         <h1 className="mt-2 text-3xl font-bold">Trusted medicines, traceable journeys.</h1>
         <input
+          aria-label="Search medicines"
           className="mt-5 w-full max-w-xl rounded-xl p-3 text-slate-900"
           placeholder="Search medicines, generic names, brands"
           value={term}

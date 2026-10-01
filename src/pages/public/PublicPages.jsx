@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { submitContactMessage } from '../../services/contactService'
 import { subscribeCatalogue } from '../../services/catalogueService'
+import { getMedicineImage } from '../../constants/medicineImages'
 
 const publicLinks = [
   ['Home', '/'],
@@ -11,7 +12,6 @@ const publicLinks = [
   ['Medicines', '/medicines'],
   ['Categories', '/categories'],
   ['Supply chain', '/supply-chain'],
-  ['Verify', '/verify'],
   ['Contact', '/contact'],
 ]
 
@@ -221,8 +221,8 @@ export function HomePage() {
                 {summary.sample.map(item => (
                   <Link className="panel block overflow-hidden p-0 transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.09)]" to={`/medicines/${item.id}`} key={item.id}>
                     <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-white">
-                      {item.imageUrl ? (
-                        <img className="h-full w-full object-cover" src={item.imageUrl} alt={item.name} />
+                      {getMedicineImage(item) ? (
+                        <img className="h-full w-full object-cover" src={getMedicineImage(item)} alt={item.name} />
                       ) : (
                         <PackageCheck className="text-brand-600" size={44} />
                       )}
@@ -380,6 +380,7 @@ export function ContactPage() {
           ].map(([name, label]) => (
             <input
               key={name}
+              aria-label={label}
               className="field"
               name={name}
               required={name !== 'phone'}

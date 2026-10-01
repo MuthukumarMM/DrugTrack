@@ -11,6 +11,7 @@ import Select from '../../components/ui/Select'
 import Modal from '../../components/ui/Modal'
 import EmptyState from '../../components/feedback/EmptyState'
 import LoadingSpinner from '../../components/feedback/LoadingSpinner'
+import { uploadDrugImage } from '../../services/storageService'
 
 const initialForm = {
   name: '',
@@ -37,6 +38,7 @@ export default function DrugPage({ admin = false }) {
   const [search, setSearch] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
 
   useEffect(() => {
     const owner = admin ? undefined : currentUser?.uid
@@ -56,8 +58,14 @@ export default function DrugPage({ admin = false }) {
 
     setBusy(true)
     try {
+      let imageUrl = form.imageUrl
+      if (imageFile) {
+        const uploaded = await uploadDrugImage(editing?.id || currentUser?.uid, imageFile)
+        imageUrl = uploaded.url
+      }
       const data = {
         ...form,
+        imageUrl,
         name: form.name.trim(),
         genericName: form.genericName.trim(),
         brandName: form.brandName.trim(),
@@ -80,6 +88,7 @@ export default function DrugPage({ admin = false }) {
       setIsModalOpen(false)
       setEditing(null)
       setForm(initialForm)
+      setImageFile(null)
     } catch (err) {
       toast.error(err.message || 'Failed to save drug.')
     } finally {
@@ -102,6 +111,7 @@ export default function DrugPage({ admin = false }) {
   const handleOpenCreate = () => {
     setEditing(null)
     setForm(initialForm)
+    setImageFile(null)
     setIsModalOpen(true)
   }
 
@@ -111,6 +121,7 @@ export default function DrugPage({ admin = false }) {
       ...item,
       basePrice: String(item.basePrice ?? ''),
     })
+    setImageFile(null)
     setIsModalOpen(true)
   }
 
@@ -306,6 +317,16 @@ export default function DrugPage({ admin = false }) {
                 value={form.imageUrl}
                 onChange={e => setForm({ ...form, imageUrl: e.target.value })}
               />
+              <label className="mt-3 block text-sm font-medium text-slate-700">
+                Upload medicine image (JPG, PNG, or WEBP)
+                <input
+                  className="field mt-1 w-full bg-white text-sm"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={event => setImageFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              {imageFile && <p className="mt-1 text-xs text-teal-700">Ready to upload: {imageFile.name}</p>}
             </div>
             <div className="sm:col-span-2 flex items-center gap-2 pt-1">
               <input

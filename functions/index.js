@@ -1,9 +1,10 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import QRCode from 'qrcode'
+import nodemailer from 'nodemailer'
 import crypto from 'node:crypto'
 initializeApp()
 const db = getFirestore()
@@ -17,6 +18,29 @@ export const syncCatalogue = onDocumentWritten('inventory/{inventoryId}', async 
   if (!drugSnap.exists || drugSnap.data().status!=='ACTIVE') return listingRef.delete()
   const drug=drugSnap.data(), available=Math.max(0,Number(inventory.quantity||0)-Number(inventory.reservedQuantity||0))
   return listingRef.set({inventoryId:event.params.inventoryId,drugId:inventory.drugId,batchId:inventory.batchId,name:drug.name,genericName:drug.genericName||'',brandName:drug.brandName||'',categoryId:drug.categoryId||'',dosageForm:drug.dosageForm||'',strength:drug.strength||'',imageUrl:drug.imageUrl||'',prescriptionRequired:!!drug.prescriptionRequired,price:Number(inventory.sellingPrice||drug.basePrice||0),availableQuantity:available,status:available?'IN_STOCK':'OUT_OF_STOCK',updatedAt:FieldValue.serverTimestamp()})
+})
+
+export const sendContactMessageEmail = onDocumentCreated('contactMessages/{messageId}', async event => {
+  const message = event.data?.data()
+  if (!message) return
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, CONTACT_TO_EMAIL, CONTACT_FROM_EMAIL } = process.env
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD || !CONTACT_TO_EMAIL) {
+    console.warn('Contact email skipped: SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and CONTACT_TO_EMAIL must be configured.')
+    return
+  }
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT || 587),
+    secure: Number(SMTP_PORT || 587) === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+  })
+  await transporter.sendMail({
+    from: CONTACT_FROM_EMAIL || SMTP_USER,
+    to: CONTACT_TO_EMAIL,
+    replyTo: message.email || undefined,
+    subject: `[DrugTrack Contact] ${message.subject || 'New message'}`,
+    text: `Name: ${message.name || ''}\nEmail: ${message.email || ''}\nPhone: ${message.phone || ''}\n\n${message.message || ''}`,
+  })
 })
 
 export const generateBatchVerification = onCall(async request=>{if(!request.auth)throw new HttpsError('unauthenticated','Sign in required.');const{batchId}=request.data||{},uid=request.auth.uid,userRole=await role(uid),batchRef=db.doc(`drugBatches/${batchId}`),batch=await batchRef.get();if(!batch.exists)throw new HttpsError('not-found','Batch not found.');if(!(userRole==='ADMIN'||(userRole==='MANUFACTURER'&&batch.data().manufacturerId===uid)))throw new HttpsError('permission-denied','Not authorized.');const drug=await db.doc(`drugs/${batch.data().drugId}`).get();if(!drug.exists)throw new HttpsError('failed-precondition','Drug record not found.');const token=crypto.randomBytes(24).toString('hex'),verificationRef=db.collection('batchVerifications').doc(token),safe={token,batchId,drugName:drug.data().name,brandName:drug.data().brandName||'',manufacturerName:batch.data().manufacturerName||'',batchNumber:batch.data().batchNumber,manufacturingDate:batch.data().manufacturingDate,expiryDate:batch.data().expiryDate,status:batch.data().status||'ACTIVE',qualityStatus:batch.data().qualityStatus||'PENDING',createdAt:FieldValue.serverTimestamp()};const png=await QRCode.toBuffer(JSON.stringify({type:'drugtrack-batch',token}));const file=getStorage().bucket().file(`qr/batches/${batchId}/${token}.png`);await file.save(png,{contentType:'image/png',metadata:{cacheControl:'public,max-age=31536000'}});await verificationRef.set({...safe,qrStoragePath:file.name});await batchRef.update({verificationToken:token,qrStoragePath:file.name,updatedAt:FieldValue.serverTimestamp()});return{token,verificationUrl:`/verify/${token}`}

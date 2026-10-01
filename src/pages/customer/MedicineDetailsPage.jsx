@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, PackagePlus, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '../../components/feedback/LoadingSpinner'
+import { getMedicineImage } from '../../constants/medicineImages'
 import { useAuth } from '../../context/AuthContext'
 import { addToCart } from '../../services/cartService'
 import { getCatalogueListing } from '../../services/catalogueService'
@@ -48,8 +49,8 @@ export default function MedicineDetailsPage() {
         <section className="mt-6 grid gap-8 lg:grid-cols-[420px_1fr]">
           <div className="panel overflow-hidden">
             <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-50">
-              {item.imageUrl ? (
-                <img className="h-full w-full object-cover" src={item.imageUrl} alt={item.name} />
+              {getMedicineImage(item) ? (
+                <img className="h-full w-full object-cover" src={getMedicineImage(item)} alt={item.name} />
               ) : (
                 <PackagePlus size={70} className="text-brand-600" />
               )}
@@ -101,7 +102,7 @@ export default function MedicineDetailsPage() {
                       unitPrice: Number(item.price || 0),
                       availableQuantity: Number(item.availableQuantity || 0),
                       drugName: item.name,
-                      imageUrl: item.imageUrl || '',
+                      imageUrl: getMedicineImage(item),
                     })
                       .then(() => toast.success('Added to cart'))
                       .catch(err => toast.error(err.message))

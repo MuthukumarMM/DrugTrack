@@ -62,3 +62,9 @@ export async function uploadBatchImage(batchId, file) {
   const path = `batches/${batchId || 'common'}/${Date.now()}_${safeName}`
   return uploadFile(path, file)
 }
+
+export async function uploadDrugImage(drugId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const path = `drugs/${drugId || 'new'}/${Date.now()}_${safeName}`
+  return uploadFile(path, file)
+}

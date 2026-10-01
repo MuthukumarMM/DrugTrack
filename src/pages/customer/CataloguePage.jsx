@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext'
 import { addToCart } from '../../services/cartService'
 import { subscribeCatalogue } from '../../services/catalogueService'
 import { PublicLayout } from '../public/PublicPages'
+import { getMedicineImage } from '../../constants/medicineImages'
 
 const anyCategory = 'ALL'
 
@@ -86,7 +87,7 @@ export default function CataloguePage() {
         unitPrice: Number(item.price || 0),
         availableQuantity: Number(item.availableQuantity || 0),
         drugName: item.name,
-        imageUrl: item.imageUrl || '',
+        imageUrl: getMedicineImage(item),
         sellerId: item.sellerId,
         sellerType: item.sellerType,
         sellerName: item.sellerName,
@@ -126,6 +127,7 @@ export default function CataloguePage() {
           <div className="mt-5 relative max-w-xl">
             <Search className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400" size={18} />
             <input
+              aria-label="Search medicines"
               className="w-full rounded-2xl border border-slate-700 bg-slate-800/90 pl-11 pr-10 py-3 text-sm text-white placeholder-slate-400 focus:border-teal-400 focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-400/20"
               name="term"
               placeholder="Search by brand, medicine name, generic formula, or category..."
@@ -296,9 +298,9 @@ export default function CataloguePage() {
                     <div>
                       {/* Product Image and Badges */}
                       <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center">
-                        {item.imageUrl ? (
+                        {getMedicineImage(item) ? (
                           <img
-                            src={item.imageUrl}
+                            src={getMedicineImage(item)}
                             alt={item.name}
                             className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
                           />

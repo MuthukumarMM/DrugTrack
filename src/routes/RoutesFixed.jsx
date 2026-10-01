@@ -23,7 +23,6 @@ import CataloguePage from '../pages/customer/CataloguePage'
 import MedicineDetailsPage from '../pages/customer/MedicineDetailsPage'
 import { AboutPage, CategoriesPage, ContactPage, HomePage, SupplyChainPage } from '../pages/public/PublicPages'
 import { AddressesPage, NotificationsPage, OrderDetailPage, OrdersPage } from '../pages/customer/CustomerOperations'
-import VerifyBatchPage from '../pages/public/VerifyBatchPage'
 import RoleSelectionPage from '../pages/auth/RoleSelectionPage'
 import AccountStatusPage from '../pages/auth/AccountStatusPage'
 import AdminDashboard from '../pages/management/AdminDashboard'
@@ -34,6 +33,7 @@ import DeliveryDashboard from '../pages/operations/DeliveryDashboard'
 import OrderQueuePage from '../pages/operations/OrderQueuePage'
 import DistributorOrderQueue from '../pages/operations/DistributorOrderQueue'
 import RoleDashboard from '../pages/operations/RoleDashboard'
+import ContactMessagesPage from '../pages/management/ContactMessagesPage'
 
 export default function RoutesFixed() {
   return <BrowserRouter><Routes>
@@ -44,8 +44,6 @@ export default function RoutesFixed() {
     <Route path="/categories" element={<CategoriesPage />} />
     <Route path="/supply-chain" element={<SupplyChainPage />} />
     <Route path="/contact" element={<ContactPage />} />
-    <Route path="/verify-drug" element={<VerifyBatchPage/>}/>
-    <Route path="/verify/:token?" element={<VerifyBatchPage/>}/>
     <Route path="/get-started" element={<RoleSelectionPage/>}/>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
@@ -68,7 +66,7 @@ export default function RoutesFixed() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="orders" element={<OrderQueuePage admin />} />
           <Route path="history" element={<OrderQueuePage admin history />} />
-          <Route path="history" element={<OrderQueuePage admin history />} />
+          <Route path="contact-messages" element={<ContactMessagesPage />} />
           <Route path="categories" element={<CategoryPage />} />
           <Route path="drugs" element={<DrugManager admin />} />
           <Route path="batches" element={<BatchPage admin />} />

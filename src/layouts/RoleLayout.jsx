@@ -147,6 +147,7 @@ export const roleLinks = {
     { label: 'Inventory', to: '/admin/inventory' },
     { label: 'Orders', to: '/admin/orders' },
     { label: 'Order History', to: '/admin/history' },
+    { label: 'Contact Messages', to: '/admin/contact-messages' },
     { label: 'Profile', to: '/admin/profile' },
   ],
   MANUFACTURER: [

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { clearCart, setCartQuantity, subscribeCart } from '../../services/cartService'
 import LoadingSpinner from '../../components/feedback/LoadingSpinner'
 import PageHeader from '../../components/common/PageHeader'
+import { getMedicineImage } from '../../constants/medicineImages'
 
 function formatMoney(amount) {
   return `Rs. ${Number(amount || 0).toFixed(2)}`
@@ -136,9 +137,9 @@ export default function CartPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-xl bg-slate-100 p-2 overflow-hidden">
-                        {item.imageUrl ? (
+                        {getMedicineImage(item) ? (
                           <img
-                            src={item.imageUrl}
+                            src={getMedicineImage(item)}
                             alt={item.drugName}
                             className="h-full w-full object-contain"
                           />

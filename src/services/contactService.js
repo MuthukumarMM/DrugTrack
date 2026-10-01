@@ -5,11 +5,11 @@ import { shouldUseMockStore } from '../firebase/mode'
 
 export const submitContactMessage = async data => {
   if (shouldUseMockStore() || !db) {
-    createMockRecord('contactMessages', data)
+    createMockRecord('contactMessages', { ...data, emailStatus: 'STORED_FOR_REVIEW' })
     return Promise.resolve({ id: `msg-${Date.now()}` })
   }
   try {
-    return await addDoc(collection(db, 'contactMessages'), { ...data, createdAt: serverTimestamp() })
+    return await addDoc(collection(db, 'contactMessages'), { ...data, emailStatus: 'PENDING', createdAt: serverTimestamp() })
   } catch (error) {
     console.warn('Firestore submitContactMessage error:', error?.message || error)
     createMockRecord('contactMessages', data)
